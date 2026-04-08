@@ -1,0 +1,776 @@
+{
+  "record_id": "69ad990f-3df",
+  "timestamp": "2026-04-04T04:37:21.532234",
+  "version": "1.0",
+  "input_brief": "anker北美投放充电宝测试",
+  "input_clarifications": {},
+  "input_params": {},
+  "parsed_brand": "",
+  "parsed_industry": "",
+  "parsed_budget": "",
+  "parsed_goal": "",
+  "parsed_is_overseas": false,
+  "output_strategy": {
+    "platform_strategy": [
+      {
+        "name": "B站",
+        "goal": "品牌曝光",
+        "content_format": "中长视频",
+        "priority": "高",
+        "reasoning": "B站是3C行业在国内市场的主要营销阵地"
+      },
+      {
+        "name": "抖音",
+        "goal": "品牌曝光",
+        "content_format": "短视频",
+        "priority": "中",
+        "reasoning": "抖音是3C行业在国内市场的主要营销阵地"
+      },
+      {
+        "name": "微博",
+        "goal": "品牌曝光",
+        "content_format": "图文/视频",
+        "priority": "中",
+        "reasoning": "微博是3C行业在国内市场的主要营销阵地"
+      }
+    ],
+    "kol_strategy": {
+      "head_kol": {
+        "count": "0-1个",
+        "count_range": [
+          0,
+          1
+        ],
+        "purpose": "品牌背书，大曝光",
+        "budget_ratio": 0.3
+      },
+      "waist_kol": {
+        "count": "5-10个",
+        "count_range": [
+          5,
+          10
+        ],
+        "purpose": "精准种草，ROI核心",
+        "budget_ratio": 0.45
+      },
+      "koc": {
+        "count": "20-30个",
+        "count_range": [
+          20,
+          30
+        ],
+        "purpose": "真实口碑，长尾效应",
+        "budget_ratio": 0.24999999999999994
+      }
+    },
+    "content_strategy": {
+      "core_themes": [
+        "科技测评",
+        "开箱体验",
+        "使用教程",
+        "对比评测"
+      ],
+      "content_tone": "专业、硬核、理性",
+      "hashtag_strategy": "品牌词+品类词+场景词组合"
+    },
+    "budget_allocation": {
+      "B站": 40,
+      "抖音": 30,
+      "微博": 20,
+      "其他": 10
+    },
+    "kpis": {
+      "primary": "总曝光 2000万+",
+      "secondary": "互动量 20万+",
+      "tertiary": "品牌提及量提升50%+"
+    },
+    "timeline": [
+      {
+        "phase": "预热期",
+        "duration": "1周",
+        "activities": [
+          "话题预热",
+          "头部KOL官宣"
+        ]
+      },
+      {
+        "phase": "爆发期",
+        "duration": "2周",
+        "activities": [
+          "腰部KOL集中发布",
+          "KOC铺量",
+          "话题引爆"
+        ]
+      },
+      {
+        "phase": "持续期",
+        "duration": "1-2周",
+        "activities": [
+          "长尾内容持续",
+          "UGC引导",
+          "效果追踪"
+        ]
+      }
+    ],
+    "key_insights": [
+      "基于规则生成的备用策略"
+    ]
+  },
+  "output_kol_recommendations": {
+    "B站": [
+      {
+        "name": "@测评实验室",
+        "followers": "150万",
+        "engagement": "12.5%",
+        "category": "3C",
+        "price": "12万",
+        "city": "上海",
+        "recent_posts": [
+          "深度评测",
+          "对比测试"
+        ],
+        "brand_history": [
+          "小米",
+          "一加"
+        ],
+        "match_score": 89,
+        "match_reasoning": "基于规则的基础匹配分析",
+        "audience_overlap": "中等",
+        "content_fit": "良好",
+        "brand_alignment": "一般",
+        "risk_factors": [],
+        "advantages": [
+          "互动率良好"
+        ],
+        "estimated_roi": "1:5-1:8",
+        "cooperation_suggestions": "建议小规模试水合作"
+      }
+    ],
+    "抖音": [
+      {
+        "name": "@科技大人",
+        "followers": "300万",
+        "engagement": "5.8%",
+        "category": "3C",
+        "price": "20万",
+        "city": "北京",
+        "recent_posts": [
+          "科技评测",
+          "产品开箱"
+        ],
+        "brand_history": [
+          "苹果",
+          "三星"
+        ],
+        "match_score": 71,
+        "match_reasoning": "基于规则的基础匹配分析",
+        "audience_overlap": "中等",
+        "content_fit": "良好",
+        "brand_alignment": "一般",
+        "risk_factors": [],
+        "advantages": [
+          "互动率良好"
+        ],
+        "estimated_roi": "1:5-1:8",
+        "cooperation_suggestions": "建议小规模试水合作"
+      }
+    ]
+  },
+  "output_outreach_messages": [
+    {
+      "kol": "@测评实验室",
+      "platform": "小红书",
+      "type": "head",
+      "message": {
+        "subject": "商业合作邀请 | Anker × @测评实验室",
+        "greeting": "@测评实验室，您好",
+        "body": "@测评实验室，您好\n\n我是Anker市场部。经内部评估，我们认为您的内容影响力与我们的项目高度匹配。",
+        "full_message": "@测评实验室，您好\n\n我是Anker市场部。经内部评估，我们认为您的内容影响力与我们的项目高度匹配。"
+      }
+    },
+    {
+      "kol": "@科技大人",
+      "platform": "小红书",
+      "type": "head",
+      "message": {
+        "subject": "商业合作邀请 | Anker × @科技大人",
+        "greeting": "@科技大人，您好",
+        "body": "@科技大人，您好\n\n我是Anker市场部。经内部评估，我们认为您的内容影响力与我们的项目高度匹配。",
+        "full_message": "@科技大人，您好\n\n我是Anker市场部。经内部评估，我们认为您的内容影响力与我们的项目高度匹配。"
+      }
+    }
+  ],
+  "output_creative_briefs": {
+    "B站": {
+      "project_info": {
+        "brand": "Anker",
+        "product": "产品",
+        "platform": "B站"
+      },
+      "content_requirements": {
+        "key_messages": [],
+        "must_include": [
+          "产品展示",
+          "使用体验"
+        ],
+        "forbidden": [
+          "竞品对比",
+          "绝对化用语"
+        ],
+        "tone": "真实分享"
+      },
+      "platform_guidelines": {
+        "video_structure": [
+          "0-30秒：开场+内容预告",
+          "30秒-3分钟：引入+背景",
+          "3-10分钟：核心内容",
+          "10-15分钟：总结+升华"
+        ],
+        "thumbnail_tips": "标题党封面，高对比度配色",
+        "title_tips": "包含关键词，适当使用【】强调",
+        "bullet_comments": "引导弹幕互动，增加完播率",
+        "optimal_length": "5-15分钟"
+      },
+      "creative_direction": {
+        "title_suggestions": [],
+        "content_structure": [],
+        "visual_tips": []
+      },
+      "hashtags": {
+        "required": [
+          "#Anker"
+        ],
+        "recommended": [
+          "#产品",
+          "#好物分享",
+          "#测评"
+        ]
+      },
+      "compliance": {
+        "disclosure": "需标注'广告'或'合作'",
+        "forbidden_words": []
+      }
+    },
+    "抖音": {
+      "project_info": {
+        "brand": "Anker",
+        "product": "产品",
+        "platform": "抖音"
+      },
+      "content_requirements": {
+        "key_messages": [],
+        "must_include": [
+          "产品展示",
+          "使用体验"
+        ],
+        "forbidden": [
+          "竞品对比",
+          "绝对化用语"
+        ],
+        "tone": "真实分享"
+      },
+      "platform_guidelines": {
+        "hook_templates": [
+          "你知道吗？...",
+          "千万不要...",
+          "我花了X万才学到的...",
+          "为什么你...",
+          "挑战..."
+        ],
+        "video_structure": [
+          "0-3秒：黄金3秒抓眼球",
+          "3-15秒：核心内容输出",
+          "15-30秒：详细展开",
+          "30-60秒：结尾+CTA"
+        ],
+        "shooting_tips": [
+          "光线充足，画面清晰",
+          "背景简洁不杂乱",
+          "收音清晰，可用领夹麦",
+          "镜头稳定，可用云台"
+        ],
+        "bgm_tips": "使用平台热门音乐，增强算法推荐",
+        "optimal_length": "15-60秒",
+        "caption_tips": "字幕要大而清晰，关键词突出"
+      },
+      "creative_direction": {
+        "title_suggestions": [],
+        "content_structure": [],
+        "visual_tips": [
+          "光线充足，画面清晰",
+          "背景简洁不杂乱",
+          "收音清晰，可用领夹麦",
+          "镜头稳定，可用云台"
+        ]
+      },
+      "hashtags": {
+        "required": [
+          "#Anker"
+        ],
+        "recommended": [
+          "#产品",
+          "#好物分享",
+          "#测评"
+        ]
+      },
+      "compliance": {
+        "disclosure": "需标注'广告'或'合作'",
+        "forbidden_words": []
+      }
+    }
+  },
+  "output_full_report": {
+    "project_info": {
+      "brand": "Anker",
+      "product": "产品",
+      "industry": "3C",
+      "budget": "待商议",
+      "goal": "品牌曝光",
+      "timeline": "未提及"
+    },
+    "strategy": {
+      "platform_strategy": [
+        {
+          "name": "B站",
+          "goal": "品牌曝光",
+          "content_format": "中长视频",
+          "priority": "高",
+          "reasoning": "B站是3C行业在国内市场的主要营销阵地"
+        },
+        {
+          "name": "抖音",
+          "goal": "品牌曝光",
+          "content_format": "短视频",
+          "priority": "中",
+          "reasoning": "抖音是3C行业在国内市场的主要营销阵地"
+        },
+        {
+          "name": "微博",
+          "goal": "品牌曝光",
+          "content_format": "图文/视频",
+          "priority": "中",
+          "reasoning": "微博是3C行业在国内市场的主要营销阵地"
+        }
+      ],
+      "kol_strategy": {
+        "head_kol": {
+          "count": "0-1个",
+          "count_range": [
+            0,
+            1
+          ],
+          "purpose": "品牌背书，大曝光",
+          "budget_ratio": 0.3
+        },
+        "waist_kol": {
+          "count": "5-10个",
+          "count_range": [
+            5,
+            10
+          ],
+          "purpose": "精准种草，ROI核心",
+          "budget_ratio": 0.45
+        },
+        "koc": {
+          "count": "20-30个",
+          "count_range": [
+            20,
+            30
+          ],
+          "purpose": "真实口碑，长尾效应",
+          "budget_ratio": 0.24999999999999994
+        }
+      },
+      "content_strategy": {
+        "core_themes": [
+          "科技测评",
+          "开箱体验",
+          "使用教程",
+          "对比评测"
+        ],
+        "content_tone": "专业、硬核、理性",
+        "hashtag_strategy": "品牌词+品类词+场景词组合"
+      },
+      "budget_allocation": {
+        "B站": 40,
+        "抖音": 30,
+        "微博": 20,
+        "其他": 10
+      },
+      "kpis": {
+        "primary": "总曝光 2000万+",
+        "secondary": "互动量 20万+",
+        "tertiary": "品牌提及量提升50%+"
+      },
+      "timeline": [
+        {
+          "phase": "预热期",
+          "duration": "1周",
+          "activities": [
+            "话题预热",
+            "头部KOL官宣"
+          ]
+        },
+        {
+          "phase": "爆发期",
+          "duration": "2周",
+          "activities": [
+            "腰部KOL集中发布",
+            "KOC铺量",
+            "话题引爆"
+          ]
+        },
+        {
+          "phase": "持续期",
+          "duration": "1-2周",
+          "activities": [
+            "长尾内容持续",
+            "UGC引导",
+            "效果追踪"
+          ]
+        }
+      ],
+      "key_insights": [
+        "基于规则生成的备用策略"
+      ]
+    },
+    "kol_recommendation": {
+      "platform_kols": {
+        "B站": [
+          {
+            "name": "@测评实验室",
+            "followers": "150万",
+            "engagement": "12.5%",
+            "category": "3C",
+            "price": "12万",
+            "city": "上海",
+            "recent_posts": [
+              "深度评测",
+              "对比测试"
+            ],
+            "brand_history": [
+              "小米",
+              "一加"
+            ],
+            "match_score": 89,
+            "match_reasoning": "基于规则的基础匹配分析",
+            "audience_overlap": "中等",
+            "content_fit": "良好",
+            "brand_alignment": "一般",
+            "risk_factors": [],
+            "advantages": [
+              "互动率良好"
+            ],
+            "estimated_roi": "1:5-1:8",
+            "cooperation_suggestions": "建议小规模试水合作"
+          }
+        ],
+        "抖音": [
+          {
+            "name": "@科技大人",
+            "followers": "300万",
+            "engagement": "5.8%",
+            "category": "3C",
+            "price": "20万",
+            "city": "北京",
+            "recent_posts": [
+              "科技评测",
+              "产品开箱"
+            ],
+            "brand_history": [
+              "苹果",
+              "三星"
+            ],
+            "match_score": 71,
+            "match_reasoning": "基于规则的基础匹配分析",
+            "audience_overlap": "中等",
+            "content_fit": "良好",
+            "brand_alignment": "一般",
+            "risk_factors": [],
+            "advantages": [
+              "互动率良好"
+            ],
+            "estimated_roi": "1:5-1:8",
+            "cooperation_suggestions": "建议小规模试水合作"
+          }
+        ]
+      },
+      "kol_combo": {
+        "strategy_overview": "基于50.0万预算的KOL组合策略",
+        "budget_allocation": {
+          "head_kol": {
+            "percentage": 40,
+            "amount": 20.0,
+            "rationale": "品牌背书"
+          },
+          "waist_kol": {
+            "percentage": 45,
+            "amount": 22.5,
+            "rationale": "精准种草"
+          },
+          "koc": {
+            "percentage": 15,
+            "amount": 7.5,
+            "rationale": "口碑铺量"
+          }
+        },
+        "recommended_head": [
+          {
+            "name": "@测评实验室",
+            "followers": "150万",
+            "engagement": "12.5%",
+            "category": "3C",
+            "price": "12万",
+            "city": "上海",
+            "recent_posts": [
+              "深度评测",
+              "对比测试"
+            ],
+            "brand_history": [
+              "小米",
+              "一加"
+            ]
+          },
+          {
+            "name": "@科技大人",
+            "followers": "300万",
+            "engagement": "5.8%",
+            "category": "3C",
+            "price": "20万",
+            "city": "北京",
+            "recent_posts": [
+              "科技评测",
+              "产品开箱"
+            ],
+            "brand_history": [
+              "苹果",
+              "三星"
+            ]
+          }
+        ],
+        "recommended_waist": [],
+        "koc_strategy": {
+          "count": 30,
+          "selection_criteria": "真实用户",
+          "execution_approach": "批量铺量"
+        }
+      }
+    },
+    "outreach_plan": {
+      "messages": [
+        {
+          "kol": "@测评实验室",
+          "platform": "小红书",
+          "type": "head",
+          "message": {
+            "subject": "商业合作邀请 | Anker × @测评实验室",
+            "greeting": "@测评实验室，您好",
+            "body": "@测评实验室，您好\n\n我是Anker市场部。经内部评估，我们认为您的内容影响力与我们的项目高度匹配。",
+            "full_message": "@测评实验室，您好\n\n我是Anker市场部。经内部评估，我们认为您的内容影响力与我们的项目高度匹配。"
+          }
+        },
+        {
+          "kol": "@科技大人",
+          "platform": "小红书",
+          "type": "head",
+          "message": {
+            "subject": "商业合作邀请 | Anker × @科技大人",
+            "greeting": "@科技大人，您好",
+            "body": "@科技大人，您好\n\n我是Anker市场部。经内部评估，我们认为您的内容影响力与我们的项目高度匹配。",
+            "full_message": "@科技大人，您好\n\n我是Anker市场部。经内部评估，我们认为您的内容影响力与我们的项目高度匹配。"
+          }
+        }
+      ],
+      "follow_up_schedule": [
+        {
+          "day": 3,
+          "action": "首次跟进"
+        },
+        {
+          "day": 7,
+          "action": "二次跟进"
+        },
+        {
+          "day": 14,
+          "action": "最终确认"
+        }
+      ]
+    },
+    "creative_guidelines": {
+      "B站": {
+        "project_info": {
+          "brand": "Anker",
+          "product": "产品",
+          "platform": "B站"
+        },
+        "content_requirements": {
+          "key_messages": [],
+          "must_include": [
+            "产品展示",
+            "使用体验"
+          ],
+          "forbidden": [
+            "竞品对比",
+            "绝对化用语"
+          ],
+          "tone": "真实分享"
+        },
+        "platform_guidelines": {
+          "video_structure": [
+            "0-30秒：开场+内容预告",
+            "30秒-3分钟：引入+背景",
+            "3-10分钟：核心内容",
+            "10-15分钟：总结+升华"
+          ],
+          "thumbnail_tips": "标题党封面，高对比度配色",
+          "title_tips": "包含关键词，适当使用【】强调",
+          "bullet_comments": "引导弹幕互动，增加完播率",
+          "optimal_length": "5-15分钟"
+        },
+        "creative_direction": {
+          "title_suggestions": [],
+          "content_structure": [],
+          "visual_tips": []
+        },
+        "hashtags": {
+          "required": [
+            "#Anker"
+          ],
+          "recommended": [
+            "#产品",
+            "#好物分享",
+            "#测评"
+          ]
+        },
+        "compliance": {
+          "disclosure": "需标注'广告'或'合作'",
+          "forbidden_words": []
+        }
+      },
+      "抖音": {
+        "project_info": {
+          "brand": "Anker",
+          "product": "产品",
+          "platform": "抖音"
+        },
+        "content_requirements": {
+          "key_messages": [],
+          "must_include": [
+            "产品展示",
+            "使用体验"
+          ],
+          "forbidden": [
+            "竞品对比",
+            "绝对化用语"
+          ],
+          "tone": "真实分享"
+        },
+        "platform_guidelines": {
+          "hook_templates": [
+            "你知道吗？...",
+            "千万不要...",
+            "我花了X万才学到的...",
+            "为什么你...",
+            "挑战..."
+          ],
+          "video_structure": [
+            "0-3秒：黄金3秒抓眼球",
+            "3-15秒：核心内容输出",
+            "15-30秒：详细展开",
+            "30-60秒：结尾+CTA"
+          ],
+          "shooting_tips": [
+            "光线充足，画面清晰",
+            "背景简洁不杂乱",
+            "收音清晰，可用领夹麦",
+            "镜头稳定，可用云台"
+          ],
+          "bgm_tips": "使用平台热门音乐，增强算法推荐",
+          "optimal_length": "15-60秒",
+          "caption_tips": "字幕要大而清晰，关键词突出"
+        },
+        "creative_direction": {
+          "title_suggestions": [],
+          "content_structure": [],
+          "visual_tips": [
+            "光线充足，画面清晰",
+            "背景简洁不杂乱",
+            "收音清晰，可用领夹麦",
+            "镜头稳定，可用云台"
+          ]
+        },
+        "hashtags": {
+          "required": [
+            "#Anker"
+          ],
+          "recommended": [
+            "#产品",
+            "#好物分享",
+            "#测评"
+          ]
+        },
+        "compliance": {
+          "disclosure": "需标注'广告'或'合作'",
+          "forbidden_words": []
+        }
+      }
+    },
+    "execution_timeline": [
+      {
+        "phase": "预热期",
+        "duration": "1周",
+        "activities": [
+          "话题预热",
+          "头部KOL官宣"
+        ]
+      },
+      {
+        "phase": "爆发期",
+        "duration": "2周",
+        "activities": [
+          "腰部KOL集中发布",
+          "KOC铺量",
+          "话题引爆"
+        ]
+      },
+      {
+        "phase": "持续期",
+        "duration": "1-2周",
+        "activities": [
+          "长尾内容持续",
+          "UGC引导",
+          "效果追踪"
+        ]
+      }
+    ],
+    "next_steps": [
+      "1. 审核营销策略方案",
+      "2. 确认KOL推荐名单",
+      "3. 发送建联话术",
+      "4. 跟进KOL反馈",
+      "5. 签订合作协议",
+      "6. 执行内容创作",
+      "7. 监控投放效果"
+    ]
+  },
+  "execution_time_ms": 2017,
+  "stages_completed": [
+    "clarification",
+    "brief_parse",
+    "strategy_generate",
+    "kol_match",
+    "outreach_prepare",
+    "creative_brief",
+    "report_generate"
+  ],
+  "stages_failed": [],
+  "llm_calls_count": 0,
+  "human_rating": 2,
+  "human_feedback": "用户认为需要改进",
+  "issues_found": [
+    "用户不满意"
+  ],
+  "improvement_suggestions": [],
+  "is_flagged": true,
+  "tags": []
+}

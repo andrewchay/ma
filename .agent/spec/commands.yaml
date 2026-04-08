@@ -1,0 +1,52 @@
+commands:
+  - name: status
+    responsibility: Show agent status
+    source_hint: agent_core/commands/builtin.py
+
+  - name: help
+    responsibility: Show help information
+    source_hint: agent_core/commands/builtin.py
+
+  # StrategyIQ
+  - name: strategy-parse
+    responsibility: Parse client brief to extract key information
+    source_hint: agent_core/commands/strategy.py
+
+  - name: strategy-generate
+    responsibility: Generate marketing strategy based on brief
+    source_hint: agent_core/commands/strategy.py
+
+  # MatchAI
+  - name: kol-search
+    responsibility: Search and filter KOLs based on criteria
+    source_hint: agent_core/commands/match.py
+
+  - name: kol-combo
+    responsibility: Generate optimal KOL combination
+    source_hint: agent_core/commands/match.py
+
+  # ConnectBot
+  - name: outreach
+    responsibility: Generate personalized outreach messages
+    source_hint: agent_core/commands/connect.py
+
+  - name: follow-up
+    responsibility: Generate follow-up messages
+    source_hint: agent_core/commands/connect.py
+
+  - name: negotiation
+    responsibility: Provide negotiation advice
+    source_hint: agent_core/commands/connect.py
+
+  # CreativePilot
+  - name: creative-brief
+    responsibility: Generate creative brief for KOL
+    source_hint: agent_core/commands/creative.py
+
+  - name: content-template
+    responsibility: Generate content templates
+    source_hint: agent_core/commands/creative.py
+
+  - name: content-review
+    responsibility: Review content for compliance
+    source_hint: agent_core/commands/creative.py

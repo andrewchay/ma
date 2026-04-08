@@ -1,0 +1,30 @@
+{
+  "record_id": "6847f031-2f9",
+  "timestamp": "2026-04-04T04:23:46.588074",
+  "version": "1.0",
+  "input_brief": "anker需要做投放，针对年轻用户",
+  "input_clarifications": {},
+  "input_params": {
+    "test_param": "value"
+  },
+  "parsed_brand": "Anker",
+  "parsed_industry": "3C",
+  "parsed_budget": "",
+  "parsed_goal": "",
+  "parsed_is_overseas": false,
+  "output_strategy": {},
+  "output_kol_recommendations": [],
+  "output_outreach_messages": [],
+  "output_creative_briefs": {},
+  "output_full_report": {},
+  "execution_time_ms": 0,
+  "stages_completed": [],
+  "stages_failed": [],
+  "llm_calls_count": 0,
+  "human_rating": 5,
+  "human_feedback": "测试反馈",
+  "issues_found": [],
+  "improvement_suggestions": [],
+  "is_flagged": false,
+  "tags": []
+}

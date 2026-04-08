@@ -1,0 +1,21 @@
+{
+  "last_updated": "2026-04-04T05:09:05.271063",
+  "iterations": [
+    {
+      "iteration_id": "iter-20260404-050905",
+      "timestamp": "2026-04-04T05:09:05.270861",
+      "trigger_feedback_id": "d15e2253-ef2",
+      "issue_description": "用户反馈：方案里就没有kol，只有平台策略，没有其他营销策略",
+      "affected_module": "StrategyIQ",
+      "changes_made": [
+        "1. 新增SAMPLE_KOL_DATABASE示例KOL数据库（美妆/3C/快消/母婴/通用）",
+        "2. 增强_generate_kol_strategy函数，添加具体KOL推荐列表",
+        "3. 新增_generate_execution_guide函数，提供详细执行指导",
+        "4. 改进LLM system_prompt，强制要求返回具体KOL推荐",
+        "5. 更新_rule_based_strategy，增加execution_guide和详细洞察"
+      ],
+      "expected_improvement": "策略输出将包含具体的头部和腰部KOL推荐，以及详细的执行指导，提升用户满意度",
+      "status": "implemented"
+    }
+  ]
+}

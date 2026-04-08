@@ -1,0 +1,139 @@
+{
+  "record_id": "6c60cfcc-84f",
+  "timestamp": "2026-04-04T04:28:57.467326",
+  "version": "1.0",
+  "input_brief": "anker需要做投放北美市场新产品投放测试",
+  "input_clarifications": {},
+  "input_params": {},
+  "parsed_brand": "",
+  "parsed_industry": "",
+  "parsed_budget": "",
+  "parsed_goal": "",
+  "parsed_is_overseas": false,
+  "output_strategy": {
+    "platform_strategy": [
+      {
+        "name": "B站",
+        "goal": "品牌曝光",
+        "content_format": "中长视频",
+        "priority": "高",
+        "reasoning": "B站是3C行业在国内市场的主要营销阵地"
+      },
+      {
+        "name": "抖音",
+        "goal": "品牌曝光",
+        "content_format": "短视频",
+        "priority": "中",
+        "reasoning": "抖音是3C行业在国内市场的主要营销阵地"
+      },
+      {
+        "name": "微博",
+        "goal": "品牌曝光",
+        "content_format": "图文/视频",
+        "priority": "中",
+        "reasoning": "微博是3C行业在国内市场的主要营销阵地"
+      }
+    ],
+    "kol_strategy": {
+      "head_kol": {
+        "count": "0-1个",
+        "count_range": [
+          0,
+          1
+        ],
+        "purpose": "品牌背书，大曝光",
+        "budget_ratio": 0.3
+      },
+      "waist_kol": {
+        "count": "5-10个",
+        "count_range": [
+          5,
+          10
+        ],
+        "purpose": "精准种草，ROI核心",
+        "budget_ratio": 0.45
+      },
+      "koc": {
+        "count": "20-30个",
+        "count_range": [
+          20,
+          30
+        ],
+        "purpose": "真实口碑，长尾效应",
+        "budget_ratio": 0.24999999999999994
+      }
+    },
+    "content_strategy": {
+      "core_themes": [
+        "科技测评",
+        "开箱体验",
+        "使用教程",
+        "对比评测"
+      ],
+      "content_tone": "专业、硬核、理性",
+      "hashtag_strategy": "品牌词+品类词+场景词组合"
+    },
+    "budget_allocation": {
+      "B站": 40,
+      "抖音": 30,
+      "微博": 20,
+      "其他": 10
+    },
+    "kpis": {
+      "primary": "总曝光 2000万+",
+      "secondary": "互动量 20万+",
+      "tertiary": "品牌提及量提升50%+"
+    },
+    "timeline": [
+      {
+        "phase": "预热期",
+        "duration": "1周",
+        "activities": [
+          "话题预热",
+          "头部KOL官宣"
+        ]
+      },
+      {
+        "phase": "爆发期",
+        "duration": "2周",
+        "activities": [
+          "腰部KOL集中发布",
+          "KOC铺量",
+          "话题引爆"
+        ]
+      },
+      {
+        "phase": "持续期",
+        "duration": "1-2周",
+        "activities": [
+          "长尾内容持续",
+          "UGC引导",
+          "效果追踪"
+        ]
+      }
+    ],
+    "key_insights": [
+      "基于规则生成的备用策略"
+    ]
+  },
+  "output_kol_recommendations": [],
+  "output_outreach_messages": [],
+  "output_creative_briefs": {},
+  "output_full_report": {},
+  "execution_time_ms": 1483,
+  "stages_completed": [
+    "clarification",
+    "brief_parse",
+    "strategy_generate"
+  ],
+  "stages_failed": [
+    "kol_match"
+  ],
+  "llm_calls_count": 0,
+  "human_rating": null,
+  "human_feedback": "",
+  "issues_found": [],
+  "improvement_suggestions": [],
+  "is_flagged": false,
+  "tags": []
+}

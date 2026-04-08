@@ -1,0 +1,98 @@
+tools:
+  # StrategyIQ
+  - name: StrategyParseTool
+    responsibility: Parse client brief to extract key information
+    input_schema:
+      brief: string
+
+  - name: StrategyGenerateTool
+    responsibility: Generate marketing strategy based on parsed brief
+    input_schema:
+      brief_data: object
+
+  # MatchAI
+  - name: KOLSearchTool
+    responsibility: Search and filter KOLs based on criteria
+    input_schema:
+      platform: string
+      category: string
+      min_followers: string
+      max_followers: string
+      min_engagement: number
+      city: string
+      limit: number
+
+  - name: KOLComboTool
+    responsibility: Generate optimal KOL combination based on budget
+    input_schema:
+      budget: number
+      platforms: array
+      category: string
+
+  - name: KOLAnalyzeTool
+    responsibility: Analyze KOL data quality and risk assessment
+    input_schema:
+      kol_data: object
+      target_category: string
+
+  # ConnectBot
+  - name: OutreachGenerateTool
+    responsibility: Generate personalized outreach messages to KOLs
+    input_schema:
+      kol_name: string
+      brand: string
+      platform: string
+      style: string
+      content_highlight: string
+      cooperation_content: string
+      benefits: string
+      timeline: string
+
+  - name: FollowUpGenerateTool
+    responsibility: Generate follow-up messages for KOL outreach
+    input_schema:
+      kol_name: string
+      brand: string
+      days_since: number
+      previous_response: string
+
+  - name: NegotiationAdviceTool
+    responsibility: Provide negotiation tips and counter-offer suggestions
+    input_schema:
+      kol_price: number
+      budget: number
+      kol_engagement: number
+      kol_followers: number
+
+  - name: ContractClausesTool
+    responsibility: Generate recommended contract clauses
+    input_schema:
+      cooperation_type: string
+
+  # CreativePilot
+  - name: CreativeBriefTool
+    responsibility: Generate creative brief for KOL content creation
+    input_schema:
+      brand: string
+      product: string
+      platform: string
+      kol_style: string
+      key_messages: array
+      must_include: array
+      forbidden: array
+
+  - name: ContentTemplateTool
+    responsibility: Generate content templates for different platforms
+    input_schema:
+      template_type: string
+      platform: string
+      brand: string
+      product: string
+
+  - name: ContentReviewTool
+    responsibility: Review content for compliance and brand alignment
+    input_schema:
+      content: string
+      brand: string
+      platform: string
+      requirements: object

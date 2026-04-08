@@ -1,0 +1,11 @@
+# Flow 复楼 MA Agent - 依赖文件
+
+# Web UI
+streamlit>=1.28.0
+
+# LLM 提供商 (可选)
+openai>=1.0.0
+anthropic>=0.8.0
+
+# 其他
+requests>=2.31.0

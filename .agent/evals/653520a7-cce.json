@@ -1,0 +1,729 @@
+{
+  "record_id": "653520a7-cce",
+  "timestamp": "2026-04-04T09:10:15.682430",
+  "version": "1.0",
+  "input_brief": "Anker充电产品海外投放，美国市场，预算200万 示例2: 花西子美妆新品国内推广，预算100万，目标种草年轻女性\n\n",
+  "input_clarifications": {},
+  "input_params": {},
+  "parsed_brand": "",
+  "parsed_industry": "",
+  "parsed_budget": "",
+  "parsed_goal": "",
+  "parsed_is_overseas": false,
+  "output_strategy": {
+    "platform_strategy": [
+      {
+        "name": "YouTube",
+        "goal": "种草转化",
+        "content_format": "长视频/Shorts",
+        "priority": "高",
+        "reasoning": "YouTube是3C行业在海外市场的主要营销阵地"
+      },
+      {
+        "name": "Instagram",
+        "goal": "种草转化",
+        "content_format": "图文/Stories/Reels",
+        "priority": "中",
+        "reasoning": "Instagram是3C行业在海外市场的主要营销阵地"
+      },
+      {
+        "name": "TikTok",
+        "goal": "种草转化",
+        "content_format": "短视频",
+        "priority": "中",
+        "reasoning": "TikTok是3C行业在海外市场的主要营销阵地"
+      }
+    ],
+    "kol_strategy": {
+      "head_kol": {
+        "count": "2-3个",
+        "count_range": [
+          2,
+          3
+        ],
+        "purpose": "品牌背书，大曝光",
+        "budget_ratio": 0.4,
+        "recommended_kols": [
+          {
+            "name": "何同学",
+            "followers": "1200万+",
+            "platform": "B站",
+            "style": "科技人文",
+            "estimated_price": "100-200万"
+          },
+          {
+            "name": "老师好我叫何同学",
+            "followers": "1200万+",
+            "platform": "B站/抖音",
+            "style": "创意科技",
+            "estimated_price": "80-150万"
+          }
+        ]
+      },
+      "waist_kol": {
+        "count": "10-15个",
+        "count_range": [
+          10,
+          15
+        ],
+        "purpose": "精准种草，ROI核心",
+        "budget_ratio": 0.45,
+        "recommended_kols": [
+          {
+            "name": "数码君",
+            "followers": "100-300万",
+            "platform": "抖音",
+            "style": "产品体验",
+            "estimated_price": "5-15万"
+          },
+          {
+            "name": "科技美学",
+            "followers": "200-500万",
+            "platform": "B站",
+            "style": "深度评测",
+            "estimated_price": "10-25万"
+          },
+          {
+            "name": "小白测评",
+            "followers": "150-400万",
+            "platform": "B站/抖音",
+            "style": "数据说话",
+            "estimated_price": "8-20万"
+          }
+        ]
+      },
+      "koc": {
+        "count": "50-100个",
+        "count_range": [
+          50,
+          100
+        ],
+        "purpose": "真实口碑，长尾效应",
+        "budget_ratio": 0.14999999999999997,
+        "selection_criteria": [
+          "真实用户账号",
+          "内容垂直度>80%",
+          "互动率>3%",
+          "粉丝画像匹配"
+        ]
+      },
+      "execution_tips": [
+        "头部KOL提前2-4周预约",
+        "腰部KOL可批量联系",
+        "KOC采用产品置换+佣金模式",
+        "分批次投放测试效果"
+      ]
+    },
+    "content_strategy": {
+      "core_themes": [
+        "科技测评",
+        "开箱体验",
+        "使用教程",
+        "对比评测"
+      ],
+      "content_tone": "专业、硬核、理性",
+      "hashtag_strategy": "品牌词+品类词+场景词组合"
+    },
+    "budget_allocation": {
+      "YouTube": 40,
+      "Instagram": 30,
+      "TikTok": 20,
+      "其他": 10
+    },
+    "kpis": {
+      "primary": "ROI 1:10",
+      "secondary": "销售额 1000万+",
+      "tertiary": "转化率提升30%+"
+    },
+    "timeline": [
+      {
+        "phase": "预热期",
+        "duration": "1周",
+        "activities": [
+          "话题预热",
+          "头部KOL官宣"
+        ]
+      },
+      {
+        "phase": "爆发期",
+        "duration": "2周",
+        "activities": [
+          "腰部KOL集中发布",
+          "KOC铺量",
+          "话题引爆"
+        ]
+      },
+      {
+        "phase": "持续期",
+        "duration": "1-2周",
+        "activities": [
+          "长尾内容持续",
+          "UGC引导",
+          "效果追踪"
+        ]
+      }
+    ],
+    "execution_guide": {
+      "phases": [
+        {
+          "phase": "筹备期",
+          "duration": "1-2周",
+          "key_actions": [
+            "确定KOL名单并发出邀约",
+            "准备产品样品和brief",
+            "确认合作细节和排期"
+          ]
+        },
+        {
+          "phase": "预热期",
+          "duration": "1周",
+          "key_actions": [
+            "头部KOL发布预告",
+            "官方账号话题预热",
+            "种子用户内容铺垫"
+          ]
+        },
+        {
+          "phase": "爆发期",
+          "duration": "2-3周",
+          "key_actions": [
+            "头部+腰部KOL集中发布",
+            "话题营销和互动引导",
+            "实时监测和数据反馈"
+          ]
+        },
+        {
+          "phase": "长尾期",
+          "duration": "2-4周",
+          "key_actions": [
+            "KOC持续产出内容",
+            "UGC内容二次传播",
+            "数据复盘和效果评估"
+          ]
+        }
+      ],
+      "risk_warnings": [
+        "参数准确性核查",
+        "避免竞品直接对比",
+        "3C认证展示"
+      ],
+      "success_factors": [
+        "KOL选择与品牌调性匹配",
+        "Brief清晰，减少沟通成本",
+        "内容审核严格，避免违规",
+        "数据监测及时，快速调整",
+        "危机预案完备，快速响应"
+      ],
+      "budget_emergency_reserve": "建议预留10-15%预算应对突发情况",
+      "data_tracking_points": [
+        "曝光量、互动率",
+        "CPE、CPM成本",
+        "搜索指数变化",
+        "电商转化数据"
+      ]
+    },
+    "key_insights": [
+      "基于规则生成的策略（已基于用户反馈迭代增强KOL推荐）",
+      "针对3C行业，推荐2位头部KOL",
+      "推荐3位腰部KOL"
+    ]
+  },
+  "output_kol_recommendations": {
+    "YouTube": [],
+    "Instagram": []
+  },
+  "output_outreach_messages": [],
+  "output_creative_briefs": {
+    "YouTube": {
+      "project_info": {
+        "brand": "Anker",
+        "product": "产品",
+        "platform": "YouTube"
+      },
+      "content_requirements": {
+        "key_messages": [],
+        "must_include": [
+          "产品展示",
+          "使用体验"
+        ],
+        "forbidden": [
+          "竞品对比",
+          "绝对化用语"
+        ],
+        "tone": "真实分享"
+      },
+      "platform_guidelines": {},
+      "creative_direction": {
+        "title_suggestions": [],
+        "content_structure": [],
+        "visual_tips": []
+      },
+      "hashtags": {
+        "required": [
+          "#Anker"
+        ],
+        "recommended": [
+          "#产品",
+          "#好物分享",
+          "#测评"
+        ]
+      },
+      "compliance": {
+        "disclosure": "需标注'广告'或'合作'",
+        "forbidden_words": []
+      }
+    },
+    "Instagram": {
+      "project_info": {
+        "brand": "Anker",
+        "product": "产品",
+        "platform": "Instagram"
+      },
+      "content_requirements": {
+        "key_messages": [],
+        "must_include": [
+          "产品展示",
+          "使用体验"
+        ],
+        "forbidden": [
+          "竞品对比",
+          "绝对化用语"
+        ],
+        "tone": "真实分享"
+      },
+      "platform_guidelines": {},
+      "creative_direction": {
+        "title_suggestions": [],
+        "content_structure": [],
+        "visual_tips": []
+      },
+      "hashtags": {
+        "required": [
+          "#Anker"
+        ],
+        "recommended": [
+          "#产品",
+          "#好物分享",
+          "#测评"
+        ]
+      },
+      "compliance": {
+        "disclosure": "需标注'广告'或'合作'",
+        "forbidden_words": []
+      }
+    }
+  },
+  "output_full_report": {
+    "project_info": {
+      "brand": "Anker",
+      "product": "产品",
+      "industry": "3C",
+      "budget": 200,
+      "goal": "种草转化",
+      "timeline": "未提及"
+    },
+    "strategy": {
+      "platform_strategy": [
+        {
+          "name": "YouTube",
+          "goal": "种草转化",
+          "content_format": "长视频/Shorts",
+          "priority": "高",
+          "reasoning": "YouTube是3C行业在海外市场的主要营销阵地"
+        },
+        {
+          "name": "Instagram",
+          "goal": "种草转化",
+          "content_format": "图文/Stories/Reels",
+          "priority": "中",
+          "reasoning": "Instagram是3C行业在海外市场的主要营销阵地"
+        },
+        {
+          "name": "TikTok",
+          "goal": "种草转化",
+          "content_format": "短视频",
+          "priority": "中",
+          "reasoning": "TikTok是3C行业在海外市场的主要营销阵地"
+        }
+      ],
+      "kol_strategy": {
+        "head_kol": {
+          "count": "2-3个",
+          "count_range": [
+            2,
+            3
+          ],
+          "purpose": "品牌背书，大曝光",
+          "budget_ratio": 0.4,
+          "recommended_kols": [
+            {
+              "name": "何同学",
+              "followers": "1200万+",
+              "platform": "B站",
+              "style": "科技人文",
+              "estimated_price": "100-200万"
+            },
+            {
+              "name": "老师好我叫何同学",
+              "followers": "1200万+",
+              "platform": "B站/抖音",
+              "style": "创意科技",
+              "estimated_price": "80-150万"
+            }
+          ]
+        },
+        "waist_kol": {
+          "count": "10-15个",
+          "count_range": [
+            10,
+            15
+          ],
+          "purpose": "精准种草，ROI核心",
+          "budget_ratio": 0.45,
+          "recommended_kols": [
+            {
+              "name": "数码君",
+              "followers": "100-300万",
+              "platform": "抖音",
+              "style": "产品体验",
+              "estimated_price": "5-15万"
+            },
+            {
+              "name": "科技美学",
+              "followers": "200-500万",
+              "platform": "B站",
+              "style": "深度评测",
+              "estimated_price": "10-25万"
+            },
+            {
+              "name": "小白测评",
+              "followers": "150-400万",
+              "platform": "B站/抖音",
+              "style": "数据说话",
+              "estimated_price": "8-20万"
+            }
+          ]
+        },
+        "koc": {
+          "count": "50-100个",
+          "count_range": [
+            50,
+            100
+          ],
+          "purpose": "真实口碑，长尾效应",
+          "budget_ratio": 0.14999999999999997,
+          "selection_criteria": [
+            "真实用户账号",
+            "内容垂直度>80%",
+            "互动率>3%",
+            "粉丝画像匹配"
+          ]
+        },
+        "execution_tips": [
+          "头部KOL提前2-4周预约",
+          "腰部KOL可批量联系",
+          "KOC采用产品置换+佣金模式",
+          "分批次投放测试效果"
+        ]
+      },
+      "content_strategy": {
+        "core_themes": [
+          "科技测评",
+          "开箱体验",
+          "使用教程",
+          "对比评测"
+        ],
+        "content_tone": "专业、硬核、理性",
+        "hashtag_strategy": "品牌词+品类词+场景词组合"
+      },
+      "budget_allocation": {
+        "YouTube": 40,
+        "Instagram": 30,
+        "TikTok": 20,
+        "其他": 10
+      },
+      "kpis": {
+        "primary": "ROI 1:10",
+        "secondary": "销售额 1000万+",
+        "tertiary": "转化率提升30%+"
+      },
+      "timeline": [
+        {
+          "phase": "预热期",
+          "duration": "1周",
+          "activities": [
+            "话题预热",
+            "头部KOL官宣"
+          ]
+        },
+        {
+          "phase": "爆发期",
+          "duration": "2周",
+          "activities": [
+            "腰部KOL集中发布",
+            "KOC铺量",
+            "话题引爆"
+          ]
+        },
+        {
+          "phase": "持续期",
+          "duration": "1-2周",
+          "activities": [
+            "长尾内容持续",
+            "UGC引导",
+            "效果追踪"
+          ]
+        }
+      ],
+      "execution_guide": {
+        "phases": [
+          {
+            "phase": "筹备期",
+            "duration": "1-2周",
+            "key_actions": [
+              "确定KOL名单并发出邀约",
+              "准备产品样品和brief",
+              "确认合作细节和排期"
+            ]
+          },
+          {
+            "phase": "预热期",
+            "duration": "1周",
+            "key_actions": [
+              "头部KOL发布预告",
+              "官方账号话题预热",
+              "种子用户内容铺垫"
+            ]
+          },
+          {
+            "phase": "爆发期",
+            "duration": "2-3周",
+            "key_actions": [
+              "头部+腰部KOL集中发布",
+              "话题营销和互动引导",
+              "实时监测和数据反馈"
+            ]
+          },
+          {
+            "phase": "长尾期",
+            "duration": "2-4周",
+            "key_actions": [
+              "KOC持续产出内容",
+              "UGC内容二次传播",
+              "数据复盘和效果评估"
+            ]
+          }
+        ],
+        "risk_warnings": [
+          "参数准确性核查",
+          "避免竞品直接对比",
+          "3C认证展示"
+        ],
+        "success_factors": [
+          "KOL选择与品牌调性匹配",
+          "Brief清晰，减少沟通成本",
+          "内容审核严格，避免违规",
+          "数据监测及时，快速调整",
+          "危机预案完备，快速响应"
+        ],
+        "budget_emergency_reserve": "建议预留10-15%预算应对突发情况",
+        "data_tracking_points": [
+          "曝光量、互动率",
+          "CPE、CPM成本",
+          "搜索指数变化",
+          "电商转化数据"
+        ]
+      },
+      "key_insights": [
+        "基于规则生成的策略（已基于用户反馈迭代增强KOL推荐）",
+        "针对3C行业，推荐2位头部KOL",
+        "推荐3位腰部KOL"
+      ]
+    },
+    "kol_recommendation": {
+      "platform_kols": {
+        "YouTube": [],
+        "Instagram": []
+      },
+      "kol_combo": {
+        "strategy_overview": "基于200.0万预算的KOL组合策略",
+        "budget_allocation": {
+          "head_kol": {
+            "percentage": 40,
+            "amount": 80.0,
+            "rationale": "品牌背书"
+          },
+          "waist_kol": {
+            "percentage": 45,
+            "amount": 90.0,
+            "rationale": "精准种草"
+          },
+          "koc": {
+            "percentage": 15,
+            "amount": 30.0,
+            "rationale": "口碑铺量"
+          }
+        },
+        "recommended_head": [],
+        "recommended_waist": [],
+        "koc_strategy": {
+          "count": 30,
+          "selection_criteria": "真实用户",
+          "execution_approach": "批量铺量"
+        }
+      }
+    },
+    "outreach_plan": {
+      "messages": [],
+      "follow_up_schedule": [
+        {
+          "day": 3,
+          "action": "首次跟进"
+        },
+        {
+          "day": 7,
+          "action": "二次跟进"
+        },
+        {
+          "day": 14,
+          "action": "最终确认"
+        }
+      ]
+    },
+    "creative_guidelines": {
+      "YouTube": {
+        "project_info": {
+          "brand": "Anker",
+          "product": "产品",
+          "platform": "YouTube"
+        },
+        "content_requirements": {
+          "key_messages": [],
+          "must_include": [
+            "产品展示",
+            "使用体验"
+          ],
+          "forbidden": [
+            "竞品对比",
+            "绝对化用语"
+          ],
+          "tone": "真实分享"
+        },
+        "platform_guidelines": {},
+        "creative_direction": {
+          "title_suggestions": [],
+          "content_structure": [],
+          "visual_tips": []
+        },
+        "hashtags": {
+          "required": [
+            "#Anker"
+          ],
+          "recommended": [
+            "#产品",
+            "#好物分享",
+            "#测评"
+          ]
+        },
+        "compliance": {
+          "disclosure": "需标注'广告'或'合作'",
+          "forbidden_words": []
+        }
+      },
+      "Instagram": {
+        "project_info": {
+          "brand": "Anker",
+          "product": "产品",
+          "platform": "Instagram"
+        },
+        "content_requirements": {
+          "key_messages": [],
+          "must_include": [
+            "产品展示",
+            "使用体验"
+          ],
+          "forbidden": [
+            "竞品对比",
+            "绝对化用语"
+          ],
+          "tone": "真实分享"
+        },
+        "platform_guidelines": {},
+        "creative_direction": {
+          "title_suggestions": [],
+          "content_structure": [],
+          "visual_tips": []
+        },
+        "hashtags": {
+          "required": [
+            "#Anker"
+          ],
+          "recommended": [
+            "#产品",
+            "#好物分享",
+            "#测评"
+          ]
+        },
+        "compliance": {
+          "disclosure": "需标注'广告'或'合作'",
+          "forbidden_words": []
+        }
+      }
+    },
+    "execution_timeline": [
+      {
+        "phase": "预热期",
+        "duration": "1周",
+        "activities": [
+          "话题预热",
+          "头部KOL官宣"
+        ]
+      },
+      {
+        "phase": "爆发期",
+        "duration": "2周",
+        "activities": [
+          "腰部KOL集中发布",
+          "KOC铺量",
+          "话题引爆"
+        ]
+      },
+      {
+        "phase": "持续期",
+        "duration": "1-2周",
+        "activities": [
+          "长尾内容持续",
+          "UGC引导",
+          "效果追踪"
+        ]
+      }
+    ],
+    "next_steps": [
+      "1. 审核营销策略方案",
+      "2. 确认KOL推荐名单",
+      "3. 发送建联话术",
+      "4. 跟进KOL反馈",
+      "5. 签订合作协议",
+      "6. 执行内容创作",
+      "7. 监控投放效果"
+    ]
+  },
+  "execution_time_ms": 1447,
+  "stages_completed": [
+    "clarification",
+    "brief_parse",
+    "strategy_generate",
+    "kol_match",
+    "outreach_prepare",
+    "creative_brief",
+    "report_generate"
+  ],
+  "stages_failed": [],
+  "llm_calls_count": 0,
+  "human_rating": null,
+  "human_feedback": "",
+  "issues_found": [],
+  "improvement_suggestions": [],
+  "is_flagged": false,
+  "tags": []
+}
