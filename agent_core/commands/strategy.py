@@ -50,12 +50,20 @@ def run_industry_template(args: list[str]) -> int:
 
 
 def run_strategy_parse(args: list[str]) -> int:
-    """Parse brief command"""
-    from agent_core.tools.strategy_iq import strategy_parse_executor
-    
-    brief = " ".join(args) if args else ""
+    """Parse brief command (optionally auto-generate strategy)"""
+    from agent_core.tools.strategy_iq import strategy_parse_executor, strategy_generate_executor
+
+    parse_only = False
+    brief_parts: list[str] = []
+    for arg in args:
+        if arg == "--parse-only" or arg == "parse_only=true":
+            parse_only = True
+            continue
+        brief_parts.append(arg)
+
+    brief = " ".join(brief_parts) if brief_parts else ""
     if not brief:
-        print("Usage: ma strategy-parse <brief text>")
+        print("Usage: ma strategy-parse <brief text> [--parse-only]")
         return 1
     
     result = strategy_parse_executor(json.dumps({"brief": brief}))
@@ -65,7 +73,29 @@ def run_strategy_parse(args: list[str]) -> int:
     print("=" * 40)
     for key, value in data.items():
         print(f"  {key}: {value}")
-    
+
+    if not parse_only:
+        strategy_result = strategy_generate_executor(json.dumps({"brief_data": data}))
+        strategy = json.loads(strategy_result)
+
+        print("\n🎯 自动生成策略")
+        print("=" * 40)
+        print("📱 平台策略:")
+        for platform in strategy.get("platform_strategy", [])[:3]:
+            print(f"  • {platform.get('name')}: {platform.get('goal')} ({platform.get('priority')}优先级)")
+
+        kol = strategy.get("kol_strategy", {})
+        print("\n👥 KOL组合:")
+        print(f"  头部: {kol.get('head_kol', {}).get('count', '0个')}")
+        print(f"  腰部: {kol.get('waist_kol', {}).get('count', '0个')}")
+        print(f"  KOC: {kol.get('koc', {}).get('count', '0个')}")
+
+        tpl = strategy.get("industry_template", {})
+        if tpl:
+            print("\n🏭 行业模板:")
+            print(f"  行业: {tpl.get('industry')}")
+            print(f"  目标: {tpl.get('core_objective')}")
+
     return 0
 
 
@@ -86,6 +116,8 @@ def run_strategy_generate(args: list[str]) -> int:
         "goal": params.get("goal", "品牌曝光"),
         "target_audience": params.get("audience", "大众"),
     }
+    if "skills" in params:
+        brief_data["skills"] = [s.strip() for s in params["skills"].split(",") if s.strip()]
     
     result = strategy_generate_executor(json.dumps({"brief_data": brief_data}))
     data = json.loads(result)
@@ -113,6 +145,29 @@ def run_strategy_generate(args: list[str]) -> int:
     print("\n📊 KPI目标:")
     for level, kpi in data.get("kpis", {}).items():
         print(f"  {level}: {kpi}")
+
+    audience_research = data.get("audience_research", {})
+    if audience_research:
+        print("\n🔎 用户研究洞察:")
+        for insight in audience_research.get("insights", [])[:2]:
+            print(f"  • {insight}")
+
+    competitor = data.get("competitor_analysis", {})
+    if competitor:
+        print("\n🧭 竞品传播分析:")
+        for gap in competitor.get("white_space", [])[:2]:
+            print(f"  • {gap}")
+
+    angle = data.get("communication_angle", {})
+    if angle:
+        print("\n🎬 传播主角度:")
+        print(f"  Hero Message: {angle.get('hero_message', '')}")
+        print(f"  Creative Hook: {angle.get('creative_hook', '')}")
+
+    if data.get("applied_skills"):
+        print("\n🧩 已应用Skills:")
+        for s in data.get("applied_skills", []):
+            print(f"  • {s}")
 
     tpl = data.get("industry_template", {})
     if tpl:

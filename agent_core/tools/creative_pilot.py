@@ -7,6 +7,7 @@ from typing import Any
 
 from agent_core.case_playbook import derive_case_playbook
 from agent_core.industry_templates import get_industry_template, normalize_industry
+from agent_core.skills import resolve_skill_context
 
 
 PLATFORM_GUIDELINES = {
@@ -89,6 +90,7 @@ def generate_creative_brief_with_llm(
     target_audience: str,
     campaign_goal: str,
     industry: str = "通用",
+    skills: list[str] | None = None,
 ) -> dict[str, Any]:
     """使用LLM生成创意Brief"""
     from agent_core.llm import get_llm_client
@@ -107,6 +109,11 @@ def generate_creative_brief_with_llm(
         "goal": campaign_goal,
         "is_overseas": platform in {"TikTok", "Instagram", "YouTube", "Facebook"},
     })
+    skill_ctx = resolve_skill_context(
+        "creative",
+        {"industry": normalized_industry, "preferred_platforms": [platform]},
+        requested_skills=skills,
+    )
     
     system_prompt = """你是一个资深的内容创意总监。请基于品牌需求和平台特性，生成一份详细的KOL内容创作Brief。
 
@@ -136,7 +143,7 @@ def generate_creative_brief_with_llm(
     "compliance_notes": "合规注意事项",
     "success_criteria": "成功标准",
     "reference_examples": "参考案例方向"
-}"""
+}""" + skill_ctx.get("skill_prompt_addon", "")
 
     prompt = f"""请为以下品牌生成创意Brief：
 
@@ -181,6 +188,7 @@ KOL风格：{kol_style}
                     "content_pillars": industry_template.get("content_pillars", []),
                     "must_track_metrics": industry_template.get("must_track_metrics", []),
                 },
+                "applied_skills": skill_ctx.get("applied_skills", []),
                 "compliance": {
                     "disclosure": "需标注'广告'或'合作'",
                     "forbidden_words": guidelines.get("forbidden_words", []),
@@ -198,6 +206,7 @@ KOL风格：{kol_style}
         final_must_include,
         final_forbidden,
         normalized_industry,
+        applied_skills=skill_ctx.get("applied_skills", []),
     )
 
 
@@ -210,6 +219,7 @@ def _template_brief(
     must_include,
     forbidden,
     industry: str = "通用",
+    applied_skills: list[str] | None = None,
 ):
     """模板备用Brief"""
     guidelines = PLATFORM_GUIDELINES.get(platform, {})
@@ -258,6 +268,7 @@ def _template_brief(
             "content_pillars": industry_template.get("content_pillars", []),
             "must_track_metrics": industry_template.get("must_track_metrics", []),
         },
+        "applied_skills": applied_skills or [],
         "hashtags": {
             "required": [f"#{brand}"],
             "recommended": [f"#{product}", "#好物分享", "#测评"],
@@ -452,6 +463,7 @@ def creative_brief_executor(payload: str) -> str:
         target_audience=args.get("target_audience", "年轻女性"),
         campaign_goal=args.get("campaign_goal", "种草"),
         industry=args.get("industry", "通用"),
+        skills=[s.strip() for s in str(args.get("skills", "")).split(",") if s.strip()] if args.get("skills") else None,
     )
     
     return json.dumps(result, indent=2, ensure_ascii=False)

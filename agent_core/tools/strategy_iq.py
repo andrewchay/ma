@@ -6,6 +6,7 @@ from typing import Any
 
 from agent_core.case_playbook import derive_case_playbook
 from agent_core.industry_templates import get_industry_template, normalize_industry
+from agent_core.skills import resolve_skill_context
 
 
 def parse_brief(brief_text: str) -> dict[str, Any]:
@@ -33,12 +34,25 @@ def parse_brief(brief_text: str) -> dict[str, Any]:
     
     try:
         result = llm.complete(prompt, system_prompt=system_prompt, json_mode=True)
-        if isinstance(result, dict) and "error" not in result:
+        if isinstance(result, dict) and "error" not in result and not _is_weak_parse_result(result):
             return result
         # Fallback to rule-based parsing
         return _rule_based_parse(brief_text)
     except Exception as e:
         return _rule_based_parse(brief_text)
+
+
+def _is_weak_parse_result(result: dict[str, Any]) -> bool:
+    """Detect low-quality parse outputs and trigger rule-based fallback."""
+    brand = str(result.get("brand", "") or "")
+    industry = str(result.get("industry", "") or "")
+    key_messages = result.get("key_messages", []) or []
+    preferred_platforms = result.get("preferred_platforms", []) or []
+
+    weak_brand = brand in {"", "未提及", "未知"}
+    weak_industry = industry in {"", "通用", "未提及", "未知"}
+    weak_detail = len(key_messages) == 0 and len(preferred_platforms) == 0
+    return weak_brand and weak_industry and weak_detail
 
 
 def _rule_based_parse(brief_text: str) -> dict[str, Any]:
@@ -54,6 +68,8 @@ def _rule_based_parse(brief_text: str) -> dict[str, Any]:
     # 1. 特殊品牌识别（优先）
     known_brands = {
         'anker': 'Anker',
+        'nike': 'Nike',
+        '耐克': 'Nike',
         '花西子': '花西子',
         '完美日记': '完美日记',
         '小米': '小米',
@@ -141,23 +157,52 @@ def _rule_based_parse(brief_text: str) -> dict[str, Any]:
         if match:
             audience = match.group(1).strip()
             break
+    if audience == "未提及":
+        if any(k in brief_text for k in ["世界杯", "国家队", "球迷", "足球"]):
+            audience = "18-40岁足球/世界杯关注人群，偏运动潮流消费者"
     
     # 海外市场检测
     overseas_markers = ["海外", "国外", "美国", "欧洲", "日本", "韩国", "东南亚", "全球", "跨境", "出海", "tiktok", "youtube", "instagram", "facebook", "twitter"]
     is_overseas = any(marker in text_lower for marker in overseas_markers)
     
+    # 传播关键信息抽取（轻量规则）
+    key_messages = []
+    if "Aero-Fit" in brief_text or "aero-fit" in text_lower:
+        key_messages.append("Aero-Fit系列产品卖点")
+    if "世界杯" in brief_text:
+        key_messages.append("世界杯主题传播")
+    if "国家队" in brief_text or "球服" in brief_text:
+        key_messages.append("国家队球服灵感演绎")
+    if "名场面" in brief_text:
+        key_messages.append("往届世界杯名场面再创作")
+
+    preferred_platforms = []
+    if any(k in brief_text for k in ["世界杯", "足球", "运动", "球服"]):
+        preferred_platforms = ["抖音", "B站", "小红书"]
+
+    constraints = []
+    if "好莱坞风格" in brief_text:
+        constraints.append("内容风格偏好莱坞叙事与视听质感")
+    if "名场面" in brief_text:
+        constraints.append("允许演绎往届世界杯名场面")
+    constraints_text = "；".join(constraints) if constraints else "未提及"
+
+    timeline = "未提及"
+    if "即将" in brief_text:
+        timeline = "建议在1-2个月内完成预热-爆发-长尾执行"
+
     return {
         "brand": brand,
         "industry": normalize_industry(industry),
         "goal": goal,
         "budget": budget,
         "budget_amount": budget_num,
-        "timeline": "未提及",
+        "timeline": timeline,
         "target_audience": audience,
         "is_overseas": is_overseas,  # 添加海外市场标记
-        "key_messages": [],
-        "preferred_platforms": [],
-        "constraints": "未提及",
+        "key_messages": key_messages,
+        "preferred_platforms": preferred_platforms,
+        "constraints": constraints_text,
     }
 
 
@@ -167,7 +212,7 @@ def _detect_industry(brief_text: str) -> str:
 
     industry_keywords = {
         "宠物科技": ["宠物", "狗", "猫", "pet", "tracker", "collar", "分离焦虑", "项圈"],
-        "运动鞋服": ["运动", "跑步", "篮球", "训练", "球鞋", "sneaker", "赛前", "赛事"],
+        "运动鞋服": ["运动", "跑步", "篮球", "训练", "球鞋", "sneaker", "赛前", "赛事", "世界杯", "国家队", "球服", "足球", "aero-fit"],
         "美妆": ["美妆", "护肤", "化妆品", "口红", "粉底", "眼影"],
         "母婴": ["母婴", "婴儿", "宝宝", "孕妇", "育儿"],
         "时尚": ["时尚", "服装", "穿搭", "潮流", "配饰"],
@@ -200,6 +245,9 @@ def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
     
     llm = get_llm_client()
     
+    requested_skills = brief_data.get("skills", []) if isinstance(brief_data.get("skills", []), list) else []
+    skill_ctx = resolve_skill_context("strategy", brief_data, requested_skills=requested_skills)
+
     system_prompt = """你是一个资深的社交营销策略专家。请基于提供的brief信息，生成一份专业的营销策略方案。
 
 【重要要求 - 基于用户反馈迭代】
@@ -207,19 +255,40 @@ def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
 2. 平台策略要有详细的选择理由
 3. 预算分配要具体到数字
 4. 时间线要可执行
+5. 传播策略必须遵循研究先行顺序：
+   - 先做目标人群研究（产品相关生活习惯、行为洞察、情绪动机）
+   - 再做竞品传播角度分析（同质化产品如何讲）
+   - 最后结合产品功能利益点，提出差异化且有情绪价值的传播角度
 
 请确保策略包含：
-1. 平台选择及理由（至少2-3个平台）
-2. KOL组合策略（必须包含：头部/腰部/KOC的配比、具体推荐名单、预算占比）
-3. 内容方向建议（核心主题、调性、hashtag策略）
-4. 预算分配建议（平台维度+KOL维度）
-5. KPI设定（主要、次要、第三层级）
-6. 执行时间线（筹备期、预热期、爆发期、长尾期）
-7. 执行指导（关键节点、风险提醒、成功要素）
-8. 参考案例打法映射（case_playbook）
+1. 目标人群研究（用户分层、生活习惯、产品关联场景、核心痛点）
+2. 竞品传播分析（竞品主角度、内容范式、可借鉴与可避坑点）
+3. 差异化传播角度（功能利益点包装 + 情绪价值主张 + 创意表达）
+4. 平台选择及理由（至少2-3个平台）
+5. KOL组合策略（必须包含：头部/腰部/KOC的配比、具体推荐名单、预算占比）
+6. 内容方向建议（核心主题、调性、hashtag策略）
+7. 预算分配建议（平台维度+KOL维度）
+8. KPI设定（主要、次要、第三层级）
+9. 执行时间线（筹备期、预热期、爆发期、长尾期）
+10. 执行指导（关键节点、风险提醒、成功要素）
+11. 参考案例打法映射（case_playbook）
 
 以JSON格式返回：
 {
+    "audience_research": {
+        "segments": [{"name": "人群", "profile": "画像", "habits": ["习惯"], "product_linked_lifestyles": ["关联生活方式"], "core_tensions": ["矛盾痛点"]}],
+        "insights": ["洞察1", "洞察2"]
+    },
+    "competitor_analysis": {
+        "peer_brands": [{"name": "竞品", "angles": ["传播角度"], "formats": ["内容形式"], "what_works": ["有效点"], "what_to_avoid": ["风险点"]}],
+        "white_space": ["可占领空白点"]
+    },
+    "communication_angle": {
+        "functional_benefits": ["功能利益点"],
+        "emotional_values": ["情绪价值"],
+        "hero_message": "一句话主张",
+        "creative_hook": "创意钩子"
+    },
     "platform_strategy": [
         {"name": "平台名", "goal": "目标", "content_format": "内容形式", "priority": "优先级", "reasoning": "选择理由"}
     ],
@@ -265,8 +334,9 @@ def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
         "content_pillars": [{"name": "支柱名", "objective": "目标", "formats": ["形式"]}],
         "execution_tracker_fields": ["字段1", "字段2"]
     },
+    "applied_skills": ["skill1", "skill2"],
     "key_insights": ["核心洞察1", "核心洞察2"]
-}"""
+}""" + skill_ctx.get("skill_prompt_addon", "")
 
     prompt = f"""请为以下品牌制定社交营销策略：
 
@@ -290,6 +360,10 @@ def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
                 "creative_must_include": industry_template.get("creative_must_include", []),
                 "creative_forbidden": industry_template.get("creative_forbidden", []),
             })
+            result.setdefault("audience_research", _build_audience_research(brief_data))
+            result.setdefault("competitor_analysis", _build_competitor_analysis(brief_data))
+            result.setdefault("communication_angle", _build_communication_angle(brief_data))
+            result.setdefault("applied_skills", skill_ctx.get("applied_skills", []))
             return result
         return _rule_based_strategy(brief_data)
     except Exception as e:
@@ -304,6 +378,8 @@ def _rule_based_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
     is_overseas = brief_data.get("is_overseas", False)
     case_playbook = derive_case_playbook(brief_data)
     industry_template = get_industry_template(industry, is_overseas)
+    requested_skills = brief_data.get("skills", []) if isinstance(brief_data.get("skills", []), list) else []
+    skill_ctx = resolve_skill_context("strategy", brief_data, requested_skills=requested_skills)
     
     # 平台推荐
     platform_strategy = _recommend_platforms(industry, goal, budget, is_overseas)
@@ -337,6 +413,9 @@ def _rule_based_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
     execution_guide["tracker_fields"] = case_playbook.get("execution_tracker_fields", [])
     
     return {
+        "audience_research": _build_audience_research(brief_data),
+        "competitor_analysis": _build_competitor_analysis(brief_data),
+        "communication_angle": _build_communication_angle(brief_data),
         "platform_strategy": platform_strategy,
         "kol_strategy": kol_strategy,
         "content_strategy": content_strategy,
@@ -354,12 +433,79 @@ def _rule_based_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
             "creative_must_include": industry_template.get("creative_must_include", []),
             "creative_forbidden": industry_template.get("creative_forbidden", []),
         },
+        "applied_skills": skill_ctx.get("applied_skills", []),
         "key_insights": [
             "基于规则生成的策略（已基于用户反馈迭代增强KOL推荐）",
             f"案例映射: {', '.join(case_playbook.get('selected_cases', [])) or '通用方法'}",
             f"针对{industry}行业，推荐{len(kol_strategy.get('head_kol', {}).get('recommended_kols', []))}位头部KOL",
             f"推荐{len(kol_strategy.get('waist_kol', {}).get('recommended_kols', []))}位腰部KOL",
         ],
+    }
+
+
+def _build_audience_research(brief_data: dict[str, Any]) -> dict[str, Any]:
+    audience = brief_data.get("target_audience", "泛人群")
+    product_msg = (brief_data.get("key_messages") or ["产品核心卖点"])[0]
+    return {
+        "segments": [
+            {
+                "name": "核心消费人群",
+                "profile": audience,
+                "habits": ["高频社媒浏览", "关注赛事/趋势内容", "偏好短视频和真实体验内容"],
+                "product_linked_lifestyles": ["训练与通勤场景", "社交表达与身份认同"],
+                "core_tensions": ["想要专业表现，也在意风格表达", "信息过载下难以判断真实价值"],
+            }
+        ],
+        "insights": [
+            f"用户更容易被可感知的真实场景说服，而不是抽象功能描述（{product_msg}需场景化）。",
+            "情绪共鸣内容（荣耀、遗憾、逆转）可显著提升记忆点和转发意愿。",
+        ],
+    }
+
+
+def _build_competitor_analysis(brief_data: dict[str, Any]) -> dict[str, Any]:
+    industry = normalize_industry(str(brief_data.get("industry", "通用")))
+    peer = {
+        "运动鞋服": ["Nike同类系列", "Adidas赛事主题", "Puma联名运动线"],
+        "3C": ["同价位科技竞品A", "同价位科技竞品B"],
+        "美妆": ["同品类头部品牌A", "同品类头部品牌B"],
+    }
+    peers = peer.get(industry, ["同品类竞品A", "同品类竞品B"])
+    return {
+        "peer_brands": [
+            {
+                "name": peers[0],
+                "angles": ["功能参数导向", "明星/KOL背书"],
+                "formats": ["短视频对比", "话题挑战"],
+                "what_works": ["利益点清晰", "视觉记忆强"],
+                "what_to_avoid": ["同质化口号", "缺少真实场景证据"],
+            },
+            {
+                "name": peers[1],
+                "angles": ["生活方式叙事", "情绪化表达"],
+                "formats": ["剧情化内容", "UGC二创"],
+                "what_works": ["共鸣强", "互动高"],
+                "what_to_avoid": ["脱离产品机理", "转化链路弱"],
+            },
+        ],
+        "white_space": [
+            "把产品功能利益点和用户真实生活冲突直接绑定",
+            "用“名场面再演绎”建立差异化叙事资产",
+        ],
+    }
+
+
+def _build_communication_angle(brief_data: dict[str, Any]) -> dict[str, Any]:
+    key_messages = brief_data.get("key_messages") or ["产品核心卖点"]
+    constraints = str(brief_data.get("constraints", "") or "")
+    hollywood = "好莱坞" in constraints
+    return {
+        "functional_benefits": key_messages[:3],
+        "emotional_values": ["热血", "荣耀", "临场专注", "群体认同"],
+        "hero_message": "把功能利益点转译成关键时刻可被感知的状态优势。",
+        "creative_hook": "好莱坞式叙事镜头重构经典名场面，前半段情绪拉满，后半段产品机制落地。"
+        if hollywood
+        else "以高情绪冲突场景开场，接产品机制解释，再以群体认同收尾。",
     }
 
 
@@ -717,5 +863,7 @@ def strategy_generate_executor(payload: str) -> str:
         args = {"brief_data": {"industry": "通用", "budget": "中等", "goal": "品牌曝光"}}
     
     brief_data = args.get("brief_data", {})
+    if args.get("skills") and isinstance(args.get("skills"), list):
+        brief_data["skills"] = args["skills"]
     result = generate_strategy(brief_data)
     return json.dumps(result, indent=2, ensure_ascii=False)

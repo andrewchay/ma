@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from typing import Any, Optional
 
+from agent_core.skills import resolve_skill_context
+
 
 def generate_outreach_with_llm(
     kol_name: str,
@@ -15,11 +17,17 @@ def generate_outreach_with_llm(
     style: str,
     cooperation_type: str,
     budget_range: str,
+    skills: list[str] | None = None,
 ) -> dict[str, str]:
     """使用LLM生成个性化建联话术"""
     from agent_core.llm import get_llm_client
     
     llm = get_llm_client()
+    skill_ctx = resolve_skill_context(
+        "outreach",
+        {"industry": kol_profile.get("category", "通用"), "preferred_platforms": [platform]},
+        requested_skills=skills,
+    )
     
     style_prompts = {
         "formal": "正式商务风格，专业严谨",
@@ -41,7 +49,7 @@ def generate_outreach_with_llm(
     "next_steps": "下一步行动建议",
     "closing": "结尾礼貌用语",
     "full_message": "完整的消息内容"
-}}"""
+}}""" + skill_ctx.get("skill_prompt_addon", "")
 
     prompt = f"""请为以下品牌撰写给KOL的合作邀约：
 
@@ -65,11 +73,14 @@ KOL信息：
     try:
         result = llm.complete(prompt, system_prompt=system_prompt, json_mode=True)
         if isinstance(result, dict) and "error" not in result:
+            result.setdefault("applied_skills", skill_ctx.get("applied_skills", []))
             return result
     except Exception:
         pass
     
-    return _template_outreach(kol_name, brand, platform, style)
+    fallback = _template_outreach(kol_name, brand, platform, style)
+    fallback["applied_skills"] = skill_ctx.get("applied_skills", [])
+    return fallback
 
 
 def _template_outreach(kol_name: str, brand: str, platform: str, style: str) -> dict[str, str]:
@@ -293,6 +304,7 @@ def outreach_generate_executor(payload: str) -> str:
         style=args.get("style", "professional"),
         cooperation_type=args.get("cooperation_type", "内容合作"),
         budget_range=args.get("budget_range", "面议"),
+        skills=[s.strip() for s in str(args.get("skills", "")).split(",") if s.strip()] if args.get("skills") else None,
     )
     
     return json.dumps(result, indent=2, ensure_ascii=False)

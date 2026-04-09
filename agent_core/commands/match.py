@@ -92,5 +92,10 @@ def run_kol_combo(args: list[str]) -> int:
         print("\n行业模板:")
         print(f"  行业: {template.get('industry')}")
         print(f"  目标: {template.get('core_objective')}")
+
+    if combo.get("applied_skills"):
+        print("\n已应用Skills:")
+        for s in combo.get("applied_skills", []):
+            print(f"  • {s}")
     
     return 0

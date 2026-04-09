@@ -34,7 +34,7 @@ BUILTIN_TOOLS: list[ToolSpec] = [
     ToolSpec(
         name="StrategyGenerateTool",
         responsibility="Generate marketing strategy based on parsed brief",
-        input_schema={"brief_data": "object"},
+        input_schema={"brief_data": "object", "skills": "array"},
         executor=strategy_generate_executor,
     ),
     
@@ -60,6 +60,7 @@ BUILTIN_TOOLS: list[ToolSpec] = [
             "budget": "number",
             "platforms": "array",
             "category": "string",
+            "skills": "array",
         },
         executor=kol_combo_executor,
     ),
@@ -86,6 +87,7 @@ BUILTIN_TOOLS: list[ToolSpec] = [
             "cooperation_content": "string",
             "benefits": "string",
             "timeline": "string",
+            "skills": "array",
         },
         executor=outreach_generate_executor,
     ),
@@ -133,6 +135,7 @@ BUILTIN_TOOLS: list[ToolSpec] = [
             "key_messages": "array",
             "must_include": "array",
             "forbidden": "array",
+            "skills": "array",
         },
         executor=creative_brief_executor,
     ),

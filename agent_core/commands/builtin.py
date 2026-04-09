@@ -63,9 +63,10 @@ def run_help(_: list[str]) -> int:
 核心命令:
 
 📊 StrategyIQ - 策略生成
-  strategy-parse <brief>           解析brief
+  strategy-parse <brief>           解析brief并自动生成策略
+    可选: --parse-only             仅解析不生成策略
   strategy-generate [params]       生成策略
-    params: industry=<行业> budget=<预算> goal=<目标>
+    params: industry=<行业> budget=<预算> goal=<目标> skills=<skill1,skill2>
   industry-template [params]       查看行业模板
     params: industry=<行业> overseas=<true|false> 或 list=true
 

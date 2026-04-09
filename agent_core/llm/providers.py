@@ -216,65 +216,111 @@ class MinimaxProvider(BaseProvider):
     
     def _get_default_model(self) -> str:
         return os.getenv("MINIMAX_MODEL", "abab6.5-chat")
-    
+
+    def _build_candidate_urls(self) -> list[str]:
+        """
+        Build candidate endpoint URLs.
+
+        Supports both historical and newer domains, and optional GroupId.
+        """
+        group_id = os.getenv("MINIMAX_GROUP_ID", "").strip()
+        custom_base = os.getenv("MINIMAX_BASE_URL", "").strip()
+
+        bases = []
+        if custom_base:
+            bases.append(custom_base.rstrip("/"))
+        bases.extend(
+            [
+                "https://api.minimax.chat/v1/text/chatcompletion_v2",
+                "https://api.minimax.io/v1/text/chatcompletion_v2",
+            ]
+        )
+
+        urls: list[str] = []
+        for base in bases:
+            if "{group_id}" in base:
+                urls.append(base.replace("{group_id}", group_id))
+            elif group_id and "GroupId=" not in base:
+                sep = "&" if "?" in base else "?"
+                urls.append(f"{base}{sep}GroupId={group_id}")
+            else:
+                urls.append(base)
+        return urls
+
+    @staticmethod
+    def _extract_text(data: dict[str, Any]) -> str:
+        """Extract content from different Minimax response shapes."""
+        choices = data.get("choices")
+        if isinstance(choices, list) and choices:
+            message = choices[0].get("message", {})
+            content = message.get("content")
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list):
+                text_parts = [p.get("text", "") for p in content if isinstance(p, dict)]
+                if any(text_parts):
+                    return "\n".join([p for p in text_parts if p])
+
+        for key in ("reply", "output_text", "text"):
+            value = data.get(key)
+            if isinstance(value, str) and value:
+                return value
+
+        base_resp = data.get("base_resp", {})
+        if isinstance(base_resp, dict):
+            status_msg = base_resp.get("status_msg")
+            if isinstance(status_msg, str) and status_msg:
+                return f"[Minimax Error: {status_msg}]"
+
+        return f"[Minimax Error: unexpected response schema: {data}]"
+
+    def _post_chat(self, messages: list[dict[str, str]], **kwargs) -> str:
+        try:
+            import requests
+        except ImportError:
+            raise ImportError("requests package not installed. Run: pip install requests")
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": kwargs.get("temperature", 0.7),
+            "max_tokens": kwargs.get("max_tokens", 2000),
+        }
+
+        timeout = kwargs.get("timeout", 60)
+        last_error: Optional[str] = None
+        for url in self._build_candidate_urls():
+            try:
+                response = requests.post(url, headers=headers, json=payload, timeout=timeout)
+                response.raise_for_status()
+                return self._extract_text(response.json())
+            except requests.HTTPError as e:
+                status = e.response.status_code if e.response is not None else None
+                # Fast-fail auth/permission errors.
+                if status in (401, 403):
+                    body = e.response.text if e.response is not None else str(e)
+                    return f"[Minimax Error {status}: {body}]"
+                body = e.response.text if e.response is not None else str(e)
+                last_error = f"HTTP {status}: {body}"
+            except Exception as e:
+                last_error = str(e)
+
+        return f"[Minimax Error: request failed on all endpoints: {last_error}]"
+
     def complete(self, prompt: str, system_prompt: Optional[str] = None, **kwargs) -> str:
-        try:
-            import requests
-            
-            group_id = os.getenv("MINIMAX_GROUP_ID", "")
-            url = f"https://api.minimax.chat/v1/text/chatcompletion_v2?GroupId={group_id}"
-            
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            }
-            
-            messages = []
-            if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": prompt})
-            
-            payload = {
-                "model": self.model,
-                "messages": messages,
-                "temperature": kwargs.get("temperature", 0.7),
-                "max_tokens": kwargs.get("max_tokens", 2000),
-            }
-            
-            response = requests.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            
-            return data["choices"][0]["message"]["content"]
-        except Exception as e:
-            return f"[Minimax Error: {str(e)}]"
-    
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return self._post_chat(messages, **kwargs)
+
     def chat(self, messages: list[dict[str, str]], **kwargs) -> str:
-        try:
-            import requests
-            
-            group_id = os.getenv("MINIMAX_GROUP_ID", "")
-            url = f"https://api.minimax.chat/v1/text/chatcompletion_v2?GroupId={group_id}"
-            
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            }
-            
-            payload = {
-                "model": self.model,
-                "messages": messages,
-                "temperature": kwargs.get("temperature", 0.7),
-                "max_tokens": kwargs.get("max_tokens", 2000),
-            }
-            
-            response = requests.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            
-            return data["choices"][0]["message"]["content"]
-        except Exception as e:
-            return f"[Minimax Error: {str(e)}]"
+        return self._post_chat(messages, **kwargs)
 
 
 class DeepSeekProvider(BaseProvider):

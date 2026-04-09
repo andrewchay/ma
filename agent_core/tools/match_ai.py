@@ -8,6 +8,7 @@ from typing import Any, Optional
 
 from agent_core.case_playbook import derive_case_playbook
 from agent_core.industry_templates import get_industry_template, normalize_industry
+from agent_core.skills import resolve_skill_context
 
 
 # 尝试导入数据源
@@ -314,12 +315,18 @@ def generate_kol_combo_with_llm(
     brand: str,
     product: str,
     goal: str,
+    skills: list[str] | None = None,
 ) -> dict[str, Any]:
     """使用LLM生成KOL组合方案"""
     from agent_core.llm import get_llm_client
     
     llm = get_llm_client()
     
+    skill_ctx = resolve_skill_context(
+        "kol",
+        {"industry": category, "preferred_platforms": platforms},
+        requested_skills=skills,
+    )
     system_prompt = """你是一个资深的KOL投放策略专家。请基于预算和品牌需求，设计最优的KOL组合方案。
 
 请以JSON格式返回：
@@ -342,8 +349,9 @@ def generate_kol_combo_with_llm(
         "expected_roi": "预期ROI"
     },
     "timeline": "执行时间建议",
-    "risk_mitigation": ["风险应对措施1", "风险应对措施2"]
-}"""
+    "risk_mitigation": ["风险应对措施1", "风险应对措施2"],
+    "applied_skills": ["skill1"]
+}""" + skill_ctx.get("skill_prompt_addon", "")
 
     prompt = f"""请为以下品牌设计KOL组合方案：
 
@@ -359,16 +367,23 @@ def generate_kol_combo_with_llm(
     try:
         result = llm.complete(prompt, system_prompt=system_prompt, json_mode=True)
         if isinstance(result, dict) and "error" not in result:
+            result.setdefault("applied_skills", skill_ctx.get("applied_skills", []))
             return result
     except Exception:
         pass
     
     # 确保 budget 是数值类型
     budget_num = _parse_budget(budget)
-    return _rule_based_combo(budget_num, platforms, category, goal)
+    return _rule_based_combo(budget_num, platforms, category, goal, skills=skills)
 
 
-def _rule_based_combo(budget: float, platforms: list[str], category: str, goal: str) -> dict[str, Any]:
+def _rule_based_combo(
+    budget: float,
+    platforms: list[str],
+    category: str,
+    goal: str,
+    skills: list[str] | None = None,
+) -> dict[str, Any]:
     """基于规则的备用组合生成"""
     # 从样本数据中筛选匹配的KOL
     all_kols = []
@@ -393,6 +408,11 @@ def _rule_based_combo(budget: float, platforms: list[str], category: str, goal: 
         any(p in {"TikTok", "Instagram", "YouTube", "Facebook"} for p in platforms),
     )
     tier_mix = template.get("tier_mix", {})
+    skill_ctx = resolve_skill_context(
+        "kol",
+        {"industry": category, "preferred_platforms": platforms},
+        requested_skills=skills,
+    )
     
     return {
         "strategy_overview": f"基于{budget}万预算的KOL组合策略",
@@ -421,6 +441,7 @@ def _rule_based_combo(budget: float, platforms: list[str], category: str, goal: 
             "frontline_group": "事件现场/新品首发内容",
             "homebase_group": "生活场景/真实体验内容",
         },
+        "applied_skills": skill_ctx.get("applied_skills", []),
     }
 
 
@@ -521,6 +542,7 @@ def kol_combo_executor(payload: str) -> str:
         brand=args.get("brand", "品牌"),
         product=args.get("product", "产品"),
         goal=args.get("goal", "种草"),
+        skills=[s.strip() for s in str(args.get("skills", "")).split(",") if s.strip()] if args.get("skills") else None,
     )
     
     return json.dumps({

@@ -42,6 +42,17 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# 可选 Skills（用于路由到后端 skills 层）
+AVAILABLE_SKILLS = [
+    "agency-agents",
+    "competitive-analysis",
+    "content-marketing",
+    "brand-storytelling",
+    "marketing-xiaohongshu-specialist",
+    "marketing-douyin-strategist",
+    "sales-outbound-strategist",
+]
+
 # ============================================
 # CSS样式
 # ============================================
@@ -135,17 +146,19 @@ st.markdown("""
 def render_sidebar():
     with st.sidebar:
         st.markdown("### ⚙️ 系统配置")
+        minimax_group_id = os.getenv("MINIMAX_GROUP_ID", "")
         
         # LLM提供商选择
         provider = st.selectbox(
             "选择LLM提供商",
-            options=["mock", "deepseek", "openai", "claude", "kimi"],
+            options=["mock", "deepseek", "openai", "claude", "kimi", "minimax"],
             format_func=lambda x: {
                 "mock": "🧪 Mock (测试用)",
                 "deepseek": "🚀 DeepSeek (推荐)",
                 "openai": "🤖 OpenAI GPT",
                 "claude": "🧠 Claude",
                 "kimi": "🌙 Kimi (月之暗面)",
+                "minimax": "🧩 Minimax",
             }.get(x, x),
             help="选择要使用的AI模型提供商",
         )
@@ -181,6 +194,17 @@ def render_sidebar():
                 ["kimi-k2.5", "kimi-k2", "kimi-latest", "moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
                 help="kimi-k2.5 是最新版本，推荐使用",
             )
+        elif provider == "minimax":
+            model = st.selectbox(
+                "模型",
+                ["abab6.5-chat", "abab6.5s-chat", "abab7-chat-preview"],
+                help="默认使用 abab6.5-chat；如你的账号支持，可切换更高版本",
+            )
+            minimax_group_id = st.text_input(
+                "Minimax Group ID（可选）",
+                value=minimax_group_id,
+                help="部分账号/端点需要 Group ID；如不需要可留空",
+            )
         else:
             model = "mock"
         
@@ -197,9 +221,12 @@ def render_sidebar():
                         "openai": "OPENAI_API_KEY",
                         "claude": "ANTHROPIC_API_KEY",
                         "kimi": "KIMI_API_KEY",
+                        "minimax": "MINIMAX_API_KEY",
                     }
                     if provider in key_mapping:
                         os.environ[key_mapping[provider]] = api_key
+                if provider == "minimax":
+                    os.environ["MINIMAX_GROUP_ID"] = minimax_group_id.strip()
                 
                 os.environ[f"{provider.upper()}_MODEL"] = model
                 
@@ -518,6 +545,37 @@ def render_strategy_iq():
                         # JSON展示
                         with st.expander("查看完整JSON"):
                             st.json(result)
+
+                        # 自动生成策略（默认串联）
+                        st.markdown("**🎯 自动生成策略**")
+                        with st.spinner("正在基于解析结果生成策略..."):
+                            strategy = generate_strategy(result)
+
+                        # 平台策略
+                        st.markdown("**📱 平台策略**")
+                        for platform in strategy.get("platform_strategy", [])[:3]:
+                            st.write(
+                                f"- **{platform.get('name', '未知平台')}**: "
+                                f"{platform.get('goal', '')}（{platform.get('priority', '中')}优先级）"
+                            )
+
+                        # KOL组合
+                        kol = strategy.get("kol_strategy", {})
+                        st.markdown("**👥 KOL组合建议**")
+                        st.write(
+                            f"- 头部KOL：{kol.get('head_kol', {}).get('count', '0个')} | "
+                            f"腰部KOL：{kol.get('waist_kol', {}).get('count', '0个')} | "
+                            f"KOC：{kol.get('koc', {}).get('count', '0个')}"
+                        )
+
+                        # 行业模板
+                        template = strategy.get("industry_template", {})
+                        if template:
+                            st.markdown("**🏭 行业模板建议**")
+                            st.write(f"- 行业：{template.get('industry', '通用')}")
+                            st.write(f"- 目标：{template.get('core_objective', '')}")
+                            if template.get("content_pillars"):
+                                st.write(f"- 内容支柱：{', '.join(template.get('content_pillars', [])[:4])}")
                         
                         # 反馈入口
                         render_feedback_section("StrategyIQ-Brief解析")
@@ -548,6 +606,12 @@ def render_strategy_iq():
                 ["小红书", "抖音", "微博", "B站", "快手", "微信视频号"],
                 default=["小红书", "抖音"],
             )
+        strategy_skills = st.multiselect(
+            "启用Skills（可选）",
+            AVAILABLE_SKILLS,
+            default=["agency-agents", "content-marketing"],
+            key="strategy_skills",
+        )
         
         if st.button("🎯 生成策略", type="primary"):
             with st.spinner("AI正在生成策略..."):
@@ -557,6 +621,7 @@ def render_strategy_iq():
                         "budget": budget.split("(")[0],
                         "goal": goal,
                         "platforms": platforms,
+                        "skills": strategy_skills,
                     }
                     
                     result = generate_strategy(brief_data)
@@ -595,6 +660,9 @@ def render_strategy_iq():
                     kpis = result.get("kpis", {})
                     for level, kpi in kpis.items():
                         st.write(f"- **{level}**: {kpi}")
+
+                    if result.get("applied_skills"):
+                        st.write(f"🧩 已应用Skills: {', '.join(result.get('applied_skills', []))}")
                     
                     # 时间线
                     st.markdown("**📅 执行时间线**")
@@ -720,6 +788,12 @@ def render_match_ai():
         
         combo_brand = st.text_input("品牌", placeholder="如: 花西子", key="combo_brand")
         combo_product = st.text_input("产品", placeholder="如: 新品口红", key="combo_product")
+        combo_skills = st.multiselect(
+            "启用Skills（可选）",
+            AVAILABLE_SKILLS,
+            default=["agency-agents", "competitive-analysis"],
+            key="combo_skills",
+        )
         
         if st.button("🎯 生成组合方案", type="primary"):
             with st.spinner("AI正在生成最优组合..."):
@@ -731,6 +805,7 @@ def render_match_ai():
                         brand=combo_brand or "品牌",
                         product=combo_product or "产品",
                         goal=combo_goal,
+                        skills=combo_skills,
                     )
                     
                     st.success("✅ 组合方案生成完成！")
@@ -769,6 +844,9 @@ def render_match_ai():
                     st.markdown("**📊 预期效果**")
                     expected = result.get("expected_results", {})
                     st.info(f"总触达: {expected.get('total_reach', 'N/A')} | 预估互动: {expected.get('estimated_engagement', 'N/A')} | 预期ROI: {expected.get('expected_roi', 'N/A')}")
+
+                    if result.get("applied_skills"):
+                        st.write(f"🧩 已应用Skills: {', '.join(result.get('applied_skills', []))}")
                     
                     # 完整方案
                     with st.expander("查看完整方案JSON"):
@@ -819,6 +897,12 @@ def render_connect_bot():
             kol_followers = st.text_input("粉丝量", placeholder="如: 50万")
             kol_category = st.text_input("内容领域", placeholder="如: 美妆")
             kol_recent = st.text_area("近期内容", placeholder="如: 口红试色、护肤日常")
+        outreach_skills = st.multiselect(
+            "启用Skills（可选）",
+            AVAILABLE_SKILLS,
+            default=["agency-agents", "brand-storytelling"],
+            key="outreach_skills",
+        )
         
         if st.button("✉️ 生成建联话术", type="primary"):
             if not outreach_kol or not outreach_brand:
@@ -840,6 +924,7 @@ def render_connect_bot():
                             style=outreach_style,
                             cooperation_type="内容合作",
                             budget_range=outreach_budget or "面议",
+                            skills=outreach_skills,
                         )
                         
                         st.success("✅ 话术生成完成！")
@@ -862,6 +947,8 @@ def render_connect_bot():
                         with st.expander("话术要点分析"):
                             st.write(f"**价值主张**: {result.get('value_proposition', 'N/A')}")
                             st.write(f"**下一步**: {result.get('next_steps', 'N/A')}")
+                            if result.get("applied_skills"):
+                                st.write(f"**已应用Skills**: {', '.join(result.get('applied_skills', []))}")
                         
                         # 反馈入口
                         render_feedback_section("ConnectBot-建联话术")
@@ -1009,6 +1096,12 @@ def render_creative_pilot():
         with col4:
             forbidden = st.text_area("禁止事项", placeholder="如: 对比竞品、夸大宣传")
             target_audience = st.text_input("目标受众", placeholder="如: 18-25岁年轻女性")
+        creative_skills = st.multiselect(
+            "启用Skills（可选）",
+            AVAILABLE_SKILLS,
+            default=["agency-agents", "content-marketing", "brand-storytelling"],
+            key="creative_skills",
+        )
         
         if st.button("🎨 生成创意Brief", type="primary"):
             if not brief_brand or not brief_product:
@@ -1026,6 +1119,7 @@ def render_creative_pilot():
                             forbidden=[m.strip() for m in forbidden.split(",") if m.strip()],
                             target_audience=target_audience or "目标受众",
                             campaign_goal=brief_goal,
+                            skills=creative_skills,
                         )
                         
                         st.success("✅ 创意Brief生成完成！")
@@ -1048,6 +1142,9 @@ def render_creative_pilot():
                             eg = llm_brief["execution_guide"]
                             st.write(f"开头钩子: {eg.get('opening_hook', 'N/A')}")
                             st.write(f"CTA设计: {eg.get('cta', 'N/A')}")
+
+                        if result.get("applied_skills"):
+                            st.write(f"🧩 已应用Skills: {', '.join(result.get('applied_skills', []))}")
                         
                         # 平台指南
                         st.markdown("**📱 平台规范**")

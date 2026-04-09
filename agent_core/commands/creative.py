@@ -57,6 +57,11 @@ def run_creative_brief(args: list[str]) -> int:
         print(f"  行业: {tpl.get('industry')}")
         print(f"  目标: {tpl.get('core_objective')}")
         print(f"  内容支柱: {', '.join(tpl.get('content_pillars', [])[:4])}")
+
+    if data.get("applied_skills"):
+        print("\n🧩 已应用Skills:")
+        for s in data.get("applied_skills", []):
+            print(f"  • {s}")
     
     return 0
 
