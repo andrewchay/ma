@@ -661,6 +661,21 @@ def render_strategy_iq():
                     for level, kpi in kpis.items():
                         st.write(f"- **{level}**: {kpi}")
 
+                    framework = result.get("market_strategy_framework", {})
+                    if framework:
+                        with st.expander("🧠 市场策略分块框架（用户研究/竞品/产品/三定位）"):
+                            user_research = framework.get("user_research", {})
+                            st.write(f"**用户研究画像维度**: {', '.join(user_research.get('profile_dimensions', []))}")
+                            for item in user_research.get("scenario_insights", [])[:2]:
+                                st.write(f"- 场景洞察: {item}")
+                            competitor = framework.get("competitor_analysis", {})
+                            st.write(f"**竞品沟通方向**: {', '.join(competitor.get('communication_choice', []))}")
+                            product_features = framework.get("product_features", {})
+                            st.write(f"**产品独特属性**: {', '.join(product_features.get('unique_attributes', []))}")
+                            st.write("**三定位方向**:")
+                            for p in framework.get("triple_positioning_options", [])[:3]:
+                                st.write(f"- {p.get('name', '定位')}: {p.get('logic', '')}")
+
                     if result.get("applied_skills"):
                         st.write(f"🧩 已应用Skills: {', '.join(result.get('applied_skills', []))}")
                     
@@ -845,6 +860,21 @@ def render_match_ai():
                     expected = result.get("expected_results", {})
                     st.info(f"总触达: {expected.get('total_reach', 'N/A')} | 预估互动: {expected.get('estimated_engagement', 'N/A')} | 预期ROI: {expected.get('expected_roi', 'N/A')}")
 
+                    comm_plan = result.get("communication_plan", {})
+                    if comm_plan:
+                        with st.expander("📣 传播主题与节奏（三段式）"):
+                            for topic in comm_plan.get("theme_options", [])[:2]:
+                                st.write(f"- [{topic.get('type', '')}] {topic.get('theme', '')}")
+                            rhythm = comm_plan.get("rhythm", {})
+                            for phase_key, phase_name in [("opening", "开篇"), ("explosion", "引爆"), ("elevation", "升华")]:
+                                phase = rhythm.get(phase_key, {})
+                                if phase:
+                                    st.write(f"**{phase_name}({phase.get('duration_days', '')}天)**: {phase.get('goal', '')}")
+                                    st.write(f"- 重点: {phase.get('focus', '')}")
+
+                    if result.get("manual_override"):
+                        st.write("🛠️ 支持人工干预：可对KOL组合进行添加/修改/删除")
+
                     if result.get("applied_skills"):
                         st.write(f"🧩 已应用Skills: {', '.join(result.get('applied_skills', []))}")
                     
@@ -947,6 +977,10 @@ def render_connect_bot():
                         with st.expander("话术要点分析"):
                             st.write(f"**价值主张**: {result.get('value_proposition', 'N/A')}")
                             st.write(f"**下一步**: {result.get('next_steps', 'N/A')}")
+                            if result.get("contact_discovery_checklist"):
+                                st.write(f"**联系方式核查**: {', '.join(result.get('contact_discovery_checklist', []))}")
+                            if result.get("required_confirmation_fields"):
+                                st.write(f"**建联需确认信息**: {', '.join(result.get('required_confirmation_fields', []))}")
                             if result.get("applied_skills"):
                                 st.write(f"**已应用Skills**: {', '.join(result.get('applied_skills', []))}")
                         
@@ -1142,6 +1176,15 @@ def render_creative_pilot():
                             eg = llm_brief["execution_guide"]
                             st.write(f"开头钩子: {eg.get('opening_hook', 'N/A')}")
                             st.write(f"CTA设计: {eg.get('cta', 'N/A')}")
+
+                        if result.get("kol_adaptation_guidelines"):
+                            st.markdown("**👤 KOL调性适配指导**")
+                            kg = result.get("kol_adaptation_guidelines", {})
+                            st.write(f"调性对齐: {kg.get('style_alignment', 'N/A')}")
+                            for d in kg.get("dos", [])[:2]:
+                                st.write(f"- 建议: {d}")
+                            for d in kg.get("donts", [])[:2]:
+                                st.write(f"- 避免: {d}")
 
                         if result.get("applied_skills"):
                             st.write(f"🧩 已应用Skills: {', '.join(result.get('applied_skills', []))}")

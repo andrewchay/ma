@@ -91,6 +91,7 @@ def generate_creative_brief_with_llm(
     campaign_goal: str,
     industry: str = "通用",
     skills: list[str] | None = None,
+    kol_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """使用LLM生成创意Brief"""
     from agent_core.llm import get_llm_client
@@ -140,6 +141,12 @@ def generate_creative_brief_with_llm(
     },
     "platform_specific": "平台特殊要求",
     "brand_integration": "品牌植入建议",
+    "kol_adaptation_guidelines": {
+        "style_alignment": "如何贴合KOL往期调性",
+        "dos": ["建议做法1", "建议做法2"],
+        "donts": ["避免事项1", "避免事项2"],
+        "topic_variants": ["同主题可演绎角度1", "角度2"]
+    },
     "compliance_notes": "合规注意事项",
     "success_criteria": "成功标准",
     "reference_examples": "参考案例方向"
@@ -156,6 +163,7 @@ KOL风格：{kol_style}
 禁止事项：{', '.join(final_forbidden)}
 目标受众：{target_audience}
 活动目标：{campaign_goal}
+KOL历史风格参考：{json.dumps(kol_profile or {}, ensure_ascii=False)}
 
 请生成详细的创意Brief。"""
 
@@ -182,6 +190,12 @@ KOL风格：{kol_style}
                     must_include=final_must_include,
                     forbidden=final_forbidden,
                 ),
+                "kol_adaptation_guidelines": _build_kol_adaptation_guidelines(
+                    kol_style=kol_style,
+                    campaign_goal=campaign_goal,
+                    key_messages=key_messages,
+                    kol_profile=kol_profile or {},
+                ),
                 "industry_template": {
                     "industry": normalized_industry,
                     "core_objective": industry_template.get("core_objective"),
@@ -207,6 +221,7 @@ KOL风格：{kol_style}
         final_forbidden,
         normalized_industry,
         applied_skills=skill_ctx.get("applied_skills", []),
+        kol_profile=kol_profile,
     )
 
 
@@ -220,6 +235,7 @@ def _template_brief(
     forbidden,
     industry: str = "通用",
     applied_skills: list[str] | None = None,
+    kol_profile: dict[str, Any] | None = None,
 ):
     """模板备用Brief"""
     guidelines = PLATFORM_GUIDELINES.get(platform, {})
@@ -262,6 +278,12 @@ def _template_brief(
             must_include=must_include,
             forbidden=forbidden,
         ),
+        "kol_adaptation_guidelines": _build_kol_adaptation_guidelines(
+            kol_style=kol_style,
+            campaign_goal="种草转化",
+            key_messages=key_messages,
+            kol_profile=kol_profile or {},
+        ),
         "industry_template": {
             "industry": industry_template.get("industry"),
             "core_objective": industry_template.get("core_objective"),
@@ -277,6 +299,33 @@ def _template_brief(
             "disclosure": "需标注'广告'或'合作'",
             "forbidden_words": guidelines.get("forbidden_words", []),
         },
+    }
+
+
+def _build_kol_adaptation_guidelines(
+    kol_style: str,
+    campaign_goal: str,
+    key_messages: list[str],
+    kol_profile: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """生成KOL风格适配指导，确保不偏离创作者既有沟通调性。"""
+    recent_posts = kol_profile.get("recent_posts", []) if isinstance(kol_profile, dict) else []
+    recent_summary = "、".join(recent_posts[:3]) if recent_posts else "往期内容风格信息有限，建议先小样本对齐"
+    core_msg = key_messages[0] if key_messages else "核心产品利益点"
+    return {
+        "style_alignment": f"沿用KOL“{kol_style}”表达方式，保持其自然叙事节奏与口头表达习惯。",
+        "dos": [
+            f"先用KOL擅长的切入方式（如{recent_summary}）承接，再过渡到品牌主题",
+            f"围绕“{core_msg}”提供真实场景体验证据，避免生硬念稿",
+        ],
+        "donts": [
+            "避免完全脱离KOL既有内容语言体系",
+            "避免只讲口号不讲场景与体验细节",
+        ],
+        "topic_variants": [
+            f"主题主线：围绕{campaign_goal}目标，用“真实体验+观点表达”进行内容演绎",
+            "可做A/B版本：理性测评版 vs 情绪共鸣版",
+        ],
     }
 
 

@@ -261,6 +261,7 @@ def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
    - 最后结合产品功能利益点，提出差异化且有情绪价值的传播角度
 
 请确保策略包含：
+0. 市场策略分块框架（用户研究、竞品分析、产品特征、三定位发散）
 1. 目标人群研究（用户分层、生活习惯、产品关联场景、核心痛点）
 2. 竞品传播分析（竞品主角度、内容范式、可借鉴与可避坑点）
 3. 差异化传播角度（功能利益点包装 + 情绪价值主张 + 创意表达）
@@ -275,6 +276,27 @@ def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
 
 以JSON格式返回：
 {
+    "market_strategy_framework": {
+        "user_research": {
+            "profile_dimensions": ["年龄", "性别", "收入", "城市层级", "社会关系"],
+            "behavior_habits": ["行为习惯1", "行为习惯2"],
+            "scenario_insights": ["使用场景痛点1", "使用场景痛点2"],
+            "emotional_insights": ["社会关系/情绪洞察1", "洞察2"]
+        },
+        "competitor_analysis": {
+            "recent_campaign_patterns": ["同质化传播角度1", "角度2"],
+            "communication_choice": ["功能型利益点", "情感型利益点"],
+            "opportunity_gaps": ["可差异化空白1", "空白2"]
+        },
+        "product_features": {
+            "unique_attributes": ["独特属性1", "独特属性2"],
+            "functional_benefits": ["功能利益点1", "功能利益点2"],
+            "best_fit_scenarios": ["最佳使用场景1", "场景2"]
+        },
+        "triple_positioning_options": [
+            {"name": "定位方向A", "logic": "用户洞察×竞品空白×产品利益点", "risk": "潜在风险", "fit_goal": "适合目标"}
+        ]
+    },
     "audience_research": {
         "segments": [{"name": "人群", "profile": "画像", "habits": ["习惯"], "product_linked_lifestyles": ["关联生活方式"], "core_tensions": ["矛盾痛点"]}],
         "insights": ["洞察1", "洞察2"]
@@ -360,6 +382,7 @@ def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
                 "creative_must_include": industry_template.get("creative_must_include", []),
                 "creative_forbidden": industry_template.get("creative_forbidden", []),
             })
+            result.setdefault("market_strategy_framework", _build_market_strategy_framework(brief_data))
             result.setdefault("audience_research", _build_audience_research(brief_data))
             result.setdefault("competitor_analysis", _build_competitor_analysis(brief_data))
             result.setdefault("communication_angle", _build_communication_angle(brief_data))
@@ -413,6 +436,7 @@ def _rule_based_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
     execution_guide["tracker_fields"] = case_playbook.get("execution_tracker_fields", [])
     
     return {
+        "market_strategy_framework": _build_market_strategy_framework(brief_data),
         "audience_research": _build_audience_research(brief_data),
         "competitor_analysis": _build_competitor_analysis(brief_data),
         "communication_angle": _build_communication_angle(brief_data),
@@ -439,6 +463,69 @@ def _rule_based_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
             f"案例映射: {', '.join(case_playbook.get('selected_cases', [])) or '通用方法'}",
             f"针对{industry}行业，推荐{len(kol_strategy.get('head_kol', {}).get('recommended_kols', []))}位头部KOL",
             f"推荐{len(kol_strategy.get('waist_kol', {}).get('recommended_kols', []))}位腰部KOL",
+        ],
+    }
+
+
+def _build_market_strategy_framework(brief_data: dict[str, Any]) -> dict[str, Any]:
+    """构建市场策略分块框架：用户研究/竞品分析/产品特征/三定位"""
+    audience = brief_data.get("target_audience", "未提及")
+    key_messages = brief_data.get("key_messages") or ["产品核心卖点"]
+    industry = normalize_industry(str(brief_data.get("industry", "通用")))
+    goal = str(brief_data.get("goal", "品牌曝光"))
+    product_hint = key_messages[0]
+    return {
+        "user_research": {
+            "profile_dimensions": ["年龄", "性别", "收入", "生活城市", "社会关系"],
+            "behavior_habits": [
+                "高频浏览短视频与图文社区",
+                "决策前偏好先看测评与他人使用反馈",
+            ],
+            "scenario_insights": [
+                f"围绕{product_hint}的高频使用场景中，用户最担心“踩坑”和“效果不稳定”",
+                "用户在关键决策场景里更依赖真实案例，而不是抽象参数",
+            ],
+            "emotional_insights": [
+                "用户购买不仅是功能选择，也是在表达自我身份和圈层归属",
+                "在社交关系中，愿意转发能代表自己价值观的品牌内容",
+            ],
+            "target_audience_note": audience,
+        },
+        "competitor_analysis": {
+            "recent_campaign_patterns": [
+                "同质化竞品常用“功能参数罗列+达人背书”组合",
+                "热门内容往往在情绪钩子和场景化表达上更强",
+            ],
+            "communication_choice": ["功能型利益点", "情感型利益点"],
+            "opportunity_gaps": [
+                "把功能优势直接翻译到关键时刻的可感知收益",
+                "避免空泛价值观，强调“场景证据+情绪共鸣”双线并行",
+            ],
+        },
+        "product_features": {
+            "unique_attributes": [product_hint, f"{industry}行业下的差异化产品体验"],
+            "functional_benefits": key_messages[:3],
+            "best_fit_scenarios": ["通勤/日常高频场景", "社交表达或关键任务场景"],
+        },
+        "triple_positioning_options": [
+            {
+                "name": "理性证明型定位",
+                "logic": "以用户痛点场景为核心，突出可验证的功能收益并建立信任",
+                "risk": "容易被竞品在参数层面同质化跟进",
+                "fit_goal": "种草转化/销售转化",
+            },
+            {
+                "name": "情绪共鸣型定位",
+                "logic": "借助用户关系与身份表达诉求，放大品牌精神价值",
+                "risk": "若脱离产品机制，可能形成空洞叙事",
+                "fit_goal": "品牌曝光/口碑传播",
+            },
+            {
+                "name": "双核融合型定位",
+                "logic": "先情绪抓人再功能落地，形成“被打动+被说服”闭环",
+                "risk": "创意与执行要求高，需要严格内容管控",
+                "fit_goal": goal,
+            },
         ],
     }
 

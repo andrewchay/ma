@@ -81,6 +81,36 @@ def run_kol_combo(args: list[str]) -> int:
     
     print(f"\nKOC策略: {combo.get('koc_strategy', {}).get('count', 'N/A')}个")
 
+    comm = combo.get("communication_plan", {})
+    if comm:
+        print("\n📣 传播主题:")
+        for t in comm.get("theme_options", [])[:2]:
+            print(f"  • [{t.get('type', '')}] {t.get('theme', '')}")
+        rhythm = comm.get("rhythm", {})
+        if rhythm:
+            print("\n⏱️ 传播节奏（三段式）:")
+            for key, label in [("opening", "开篇"), ("explosion", "引爆"), ("elevation", "升华")]:
+                phase = rhythm.get(key, {})
+                if phase:
+                    print(f"  {label}({phase.get('duration_days', '?')}天): {phase.get('goal', '')}")
+                    if phase.get("focus"):
+                        print(f"    - 重点: {phase.get('focus')}")
+
+    framework = combo.get("kol_selection_framework", {})
+    if framework:
+        print("\n🧮 KOL筛选维度:")
+        metrics = framework.get("priority_metrics", [])
+        if metrics:
+            print(f"  优先指标: {', '.join(metrics)}")
+        if framework.get("content_relevance_ranking_logic"):
+            print(f"  内容关联性: {framework.get('content_relevance_ranking_logic')}")
+        if framework.get("budget_reverse_estimation"):
+            print(f"  预算倒推: {framework.get('budget_reverse_estimation')}")
+        if framework.get("rhythm_distribution_logic"):
+            print(f"  节奏分布: {framework.get('rhythm_distribution_logic')}")
+        if framework.get("performance_forecast_method"):
+            print(f"  效果预估: {framework.get('performance_forecast_method')}")
+
     tier_quota = combo.get("tier_quota", {})
     if tier_quota:
         print("\n分层配比:")
@@ -97,5 +127,15 @@ def run_kol_combo(args: list[str]) -> int:
         print("\n已应用Skills:")
         for s in combo.get("applied_skills", []):
             print(f"  • {s}")
+
+    if combo.get("manual_override"):
+        override = combo.get("manual_override", {})
+        print("\n🛠️ 人工干预:")
+        print(f"  开启状态: {'是' if override.get('enabled') else '否'}")
+        ops = override.get("operations", [])
+        if ops:
+            print(f"  支持操作: {', '.join(ops)}")
+        if override.get("note"):
+            print(f"  说明: {override.get('note')}")
     
     return 0

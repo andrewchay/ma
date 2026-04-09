@@ -158,6 +158,24 @@ def run_strategy_generate(args: list[str]) -> int:
         for gap in competitor.get("white_space", [])[:2]:
             print(f"  • {gap}")
 
+    framework = data.get("market_strategy_framework", {})
+    if framework:
+        print("\n🧠 市场策略分块框架:")
+        user = framework.get("user_research", {})
+        dims = user.get("profile_dimensions", [])
+        if dims:
+            print(f"  用户画像维度: {', '.join(dims)}")
+        for s in user.get("scenario_insights", [])[:2]:
+            print(f"  • 场景洞察: {s}")
+        prod = framework.get("product_features", {})
+        if prod.get("unique_attributes"):
+            print(f"  产品独特属性: {', '.join(prod.get('unique_attributes', [])[:2])}")
+        triple = framework.get("triple_positioning_options", [])
+        if triple:
+            print("  三定位方向:")
+            for item in triple[:3]:
+                print(f"    - {item.get('name', '定位')}: {item.get('logic', '')}")
+
     angle = data.get("communication_angle", {})
     if angle:
         print("\n🎬 传播主角度:")

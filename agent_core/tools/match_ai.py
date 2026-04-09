@@ -332,6 +332,24 @@ def generate_kol_combo_with_llm(
 请以JSON格式返回：
 {
     "strategy_overview": "整体策略概述",
+    "communication_plan": {
+        "theme_options": [
+            {"type": "理性利益点", "theme": "主题A", "fit_reason": "适配理由"},
+            {"type": "感性利益点", "theme": "主题B", "fit_reason": "适配理由"}
+        ],
+        "rhythm": {
+            "opening": {"duration_days": "1-3", "goal": "核心人群预热", "creator_profile": "专业/硬核意见领袖", "focus": "预热影响与二次传播"},
+            "explosion": {"duration_days": "1-2", "goal": "大众扩圈", "content_mix": "PGC+UGC", "focus": "传播广度"},
+            "elevation": {"duration_days": "1-2", "goal": "深度沉淀", "creator_profile": "行业专家/深度观点创作者", "focus": "品牌资产与精神共鸣"}
+        }
+    },
+    "kol_selection_framework": {
+        "priority_metrics": ["CPM", "CPE"],
+        "content_relevance_ranking_logic": "内容关联性排序规则",
+        "budget_reverse_estimation": "根据目标倒推曝光互动与预算配比",
+        "rhythm_distribution_logic": "三段式节奏下的KOL分布原则",
+        "performance_forecast_method": "AI预估模型说明"
+    },
     "budget_allocation": {
         "head_kol": {"percentage": 40, "amount": 40, "rationale": "分配理由"},
         "waist_kol": {"percentage": 45, "amount": 45, "rationale": "分配理由"},
@@ -347,6 +365,11 @@ def generate_kol_combo_with_llm(
         "total_reach": "预计总触达",
         "estimated_engagement": "预估互动量",
         "expected_roi": "预期ROI"
+    },
+    "manual_override": {
+        "enabled": true,
+        "operations": ["add", "modify", "delete"],
+        "note": "支持人工实时干预调整KOL组合"
     },
     "timeline": "执行时间建议",
     "risk_mitigation": ["风险应对措施1", "风险应对措施2"],
@@ -416,6 +439,14 @@ def _rule_based_combo(
     
     return {
         "strategy_overview": f"基于{budget}万预算的KOL组合策略",
+        "communication_plan": _build_communication_plan(goal, category),
+        "kol_selection_framework": {
+            "priority_metrics": ["CPM", "CPE"],
+            "content_relevance_ranking_logic": "先按传播内容关联性排序，再结合近30天条均互动与报价筛选",
+            "budget_reverse_estimation": "根据目标曝光与互动倒推所需达人数量和层级组合",
+            "rhythm_distribution_logic": "开篇以专业硬核达人种子触达，引爆阶段扩展大众达人，升华阶段配置观点型创作者",
+            "performance_forecast_method": "基于历史互动率、粉丝量、报价与平台系数进行AI区间预估",
+        },
         "budget_allocation": {
             "head_kol": {"percentage": 40, "amount": budget * 0.4, "rationale": "品牌背书"},
             "waist_kol": {"percentage": 45, "amount": budget * 0.45, "rationale": "精准种草"},
@@ -440,6 +471,12 @@ def _rule_based_combo(
         "creator_assignment": {
             "frontline_group": "事件现场/新品首发内容",
             "homebase_group": "生活场景/真实体验内容",
+        },
+        "expected_results": _estimate_combo_results(head_kols, waist_kols, budget),
+        "manual_override": {
+            "enabled": True,
+            "operations": ["add", "modify", "delete"],
+            "note": "支持人工实时干预调整KOL组合与节奏分布",
         },
         "applied_skills": skill_ctx.get("applied_skills", []),
     }
@@ -476,6 +513,69 @@ def _build_tier_quota(budget: float, tier_mix: dict[str, float] | None = None) -
         "TOP": {"count": "0-1", "budget_ratio": top_ratio},
         "MID": {"count": "4-8", "budget_ratio": mid_ratio},
         "BTM": {"count": "10-30", "budget_ratio": btm_ratio},
+    }
+
+
+def _build_communication_plan(goal: str, category: str) -> dict[str, Any]:
+    """构建三段式传播节奏与主题选项。"""
+    return {
+        "theme_options": [
+            {
+                "type": "理性利益点",
+                "theme": f"{category}产品关键场景下的可验证效果证明",
+                "fit_reason": f"适合{goal}目标，便于清晰传递产品价值与提升转化效率",
+            },
+            {
+                "type": "感性利益点",
+                "theme": f"{category}产品与用户关系/身份表达的情感共鸣叙事",
+                "fit_reason": "有利于提升品牌记忆与社交传播意愿",
+            },
+        ],
+        "rhythm": {
+            "opening": {
+                "duration_days": "1-3",
+                "goal": "埋点式预热，影响核心受众",
+                "creator_profile": "专业/硬核意见领袖",
+                "focus": "形成种子讨论并触发二次传播",
+            },
+            "explosion": {
+                "duration_days": "1-2",
+                "goal": "PGC+UGC 联动扩圈",
+                "creator_profile": "大众影响型KOL/KOC",
+                "focus": "在不偏离主题下借势大众话题，放大传播广度",
+            },
+            "elevation": {
+                "duration_days": "1-2",
+                "goal": "深度内容沉淀与立意拔高",
+                "creator_profile": "行业专家/观点型创作者",
+                "focus": "沉淀品牌资产并加深精神共鸣",
+            },
+        },
+    }
+
+
+def _estimate_combo_results(head_kols: list[dict[str, Any]], waist_kols: list[dict[str, Any]], budget: float) -> dict[str, Any]:
+    """规则估算组合效果，提供曝光/互动/ROI区间。"""
+    total_pool = head_kols + waist_kols
+    follower_base = sum(parse_followers(k.get("followers", "0")) for k in total_pool)
+    avg_engagement = 0.06
+    if total_pool:
+        rates = []
+        for k in total_pool:
+            raw = str(k.get("engagement", "6")).replace("%", "")
+            try:
+                rates.append(float(raw) / 100.0)
+            except ValueError:
+                continue
+        if rates:
+            avg_engagement = sum(rates) / len(rates)
+    total_reach = int(follower_base * 0.35) if follower_base else int(budget * 120000)
+    estimated_engagement = int(total_reach * avg_engagement)
+    roi_hint = round(max(1.2, min(4.5, 1.5 + budget / 120.0 + avg_engagement * 10)), 2)
+    return {
+        "total_reach": f"{total_reach:,}",
+        "estimated_engagement": f"{estimated_engagement:,}",
+        "expected_roi": f"1:{roi_hint}",
     }
 
 

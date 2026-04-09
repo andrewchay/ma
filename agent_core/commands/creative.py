@@ -36,20 +36,41 @@ def run_creative_brief(args: list[str]) -> int:
     
     print(f"\n📝 内容要求:")
     req = data.get("content_requirements", {})
-    print(f"  关键信息: {', '.join(req.get('key_messages', []))}")
-    print(f"  必须包含: {', '.join(req.get('must_include', []))}")
-    print(f"  禁止事项: {', '.join(req.get('forbidden', []))}")
-    print(f"  内容调性: {req.get('tone')}")
+    if req:
+        print(f"  关键信息: {', '.join(req.get('key_messages', []))}")
+        print(f"  必须包含: {', '.join(req.get('must_include', []))}")
+        print(f"  禁止事项: {', '.join(req.get('forbidden', []))}")
+        print(f"  内容调性: {req.get('tone')}")
+    else:
+        llm_brief = data.get("llm_brief", {})
+        cs = llm_brief.get("content_strategy", {})
+        print(f"  核心信息: {cs.get('core_message', 'N/A')}")
+        print(f"  切入角度: {cs.get('content_angle', 'N/A')}")
+        print(f"  情绪诉求: {cs.get('emotional_appeal', 'N/A')}")
     
     print(f"\n🏷️ 推荐标签:")
     hashtags = data.get("hashtags", {})
-    print(f"  必需: {', '.join(hashtags.get('required', []))}")
-    print(f"  推荐: {', '.join(hashtags.get('recommended', []))}")
+    if hashtags:
+        print(f"  必需: {', '.join(hashtags.get('required', []))}")
+        print(f"  推荐: {', '.join(hashtags.get('recommended', []))}")
+    else:
+        llm_brief = data.get("llm_brief", {})
+        ce = llm_brief.get("creative_elements", {})
+        print(f"  策略: {ce.get('hashtag_strategy', 'N/A')}")
     
     print(f"\n✅ 合规要求:")
     compliance = data.get("compliance", {})
     print(f"  {compliance.get('disclosure')}")
     print(f"  禁用词: {', '.join(compliance.get('forbidden_words', []))}")
+
+    if data.get("kol_adaptation_guidelines"):
+        kg = data.get("kol_adaptation_guidelines", {})
+        print("\n👤 KOL调性适配:")
+        print(f"  对齐原则: {kg.get('style_alignment', 'N/A')}")
+        for d in kg.get("dos", [])[:2]:
+            print(f"  • 建议: {d}")
+        for d in kg.get("donts", [])[:2]:
+            print(f"  • 避免: {d}")
 
     tpl = data.get("industry_template", {})
     if tpl:

@@ -28,7 +28,24 @@ def run_outreach_generate(args: list[str]) -> int:
     print("=" * 60)
     print(f"主题: {data.get('subject')}")
     print()
-    print(data.get('body'))
+    print(data.get('full_message') or data.get('body'))
+
+    checklist = data.get("contact_discovery_checklist", [])
+    if checklist:
+        print("\n🔎 联系方式核查:")
+        print(f"  {', '.join(checklist)}")
+    required_fields = data.get("required_confirmation_fields", [])
+    if required_fields:
+        print("\n📌 建联需确认信息:")
+        print(f"  {', '.join(required_fields)}")
+    if data.get("feedback_update_action"):
+        print("\n🔁 反馈闭环:")
+        print(f"  {data.get('feedback_update_action')}")
+
+    if data.get("applied_skills"):
+        print("\n🧩 已应用Skills:")
+        for s in data.get("applied_skills", []):
+            print(f"  • {s}")
     
     return 0
 

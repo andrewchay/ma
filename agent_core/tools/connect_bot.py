@@ -48,7 +48,10 @@ def generate_outreach_with_llm(
     "cooperation_details": "合作内容简述",
     "next_steps": "下一步行动建议",
     "closing": "结尾礼貌用语",
-    "full_message": "完整的消息内容"
+    "full_message": "完整的消息内容",
+    "contact_discovery_checklist": ["邮箱", "微信", "QQ", "站内私信"],
+    "required_confirmation_fields": ["传播期匹配", "合作权益", "报价区间"],
+    "feedback_update_action": "若建联反馈不佳，建议调整KOL组合（增删改）"
 }}""" + skill_ctx.get("skill_prompt_addon", "")
 
     prompt = f"""请为以下品牌撰写给KOL的合作邀约：
@@ -73,6 +76,9 @@ KOL信息：
     try:
         result = llm.complete(prompt, system_prompt=system_prompt, json_mode=True)
         if isinstance(result, dict) and "error" not in result:
+            result.setdefault("contact_discovery_checklist", ["邮箱", "微信", "QQ", "站内私信"])
+            result.setdefault("required_confirmation_fields", ["传播期匹配", "合作权益", "报价区间"])
+            result.setdefault("feedback_update_action", "根据建联反馈实时调整KOL组合（添加/修改/删除）")
             result.setdefault("applied_skills", skill_ctx.get("applied_skills", []))
             return result
     except Exception:
@@ -102,6 +108,9 @@ def _template_outreach(kol_name: str, brand: str, platform: str, style: str) -> 
         "greeting": f"{kol_name}，您好",
         "body": bodies.get(style, bodies["professional"]),
         "full_message": bodies.get(style, bodies["professional"]),
+        "contact_discovery_checklist": ["邮箱", "微信", "QQ", "站内私信"],
+        "required_confirmation_fields": ["传播期匹配", "合作权益", "报价区间"],
+        "feedback_update_action": "根据建联反馈实时调整KOL组合（添加/修改/删除）",
     }
 
 
