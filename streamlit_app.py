@@ -7,7 +7,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 import streamlit as st
 
@@ -145,6 +145,23 @@ st.markdown("""
 # ============================================
 def render_sidebar():
     with st.sidebar:
+        st.markdown("### 🧭 页面导航")
+        nav_options = ["首页", "工作流", "StrategyIQ", "MatchAI", "ConnectBot", "CreativePilot"]
+        current = st.session_state.get("current_tab", "首页")
+        if current in {"工作流工作台", "工作流V2"}:
+            current = "工作流"
+        if current not in nav_options:
+            current = "首页"
+        selected_tab = st.radio(
+            "跳转到",
+            nav_options,
+            index=nav_options.index(current),
+            label_visibility="collapsed",
+            key="sidebar_nav_tab",
+        )
+        st.session_state.current_tab = selected_tab
+        st.divider()
+
         st.markdown("### ⚙️ 系统配置")
         minimax_group_id = os.getenv("MINIMAX_GROUP_ID", "")
         
@@ -326,20 +343,24 @@ def render_home():
     st.divider()
     st.markdown("### 🚀 快速开始")
     
-    quick_cols = st.columns(4)
+    quick_cols = st.columns(5)
     with quick_cols[0]:
+        if st.button("🧩 进入工作流", use_container_width=True):
+            st.session_state.current_tab = "工作流"
+            st.rerun()
+    with quick_cols[1]:
         if st.button("📊 生成策略", use_container_width=True):
             st.session_state.current_tab = "StrategyIQ"
             st.rerun()
-    with quick_cols[1]:
+    with quick_cols[2]:
         if st.button("🎯 搜索KOL", use_container_width=True):
             st.session_state.current_tab = "MatchAI"
             st.rerun()
-    with quick_cols[2]:
+    with quick_cols[3]:
         if st.button("✉️ 生成话术", use_container_width=True):
             st.session_state.current_tab = "ConnectBot"
             st.rerun()
-    with quick_cols[3]:
+    with quick_cols[4]:
         if st.button("🎨 创意指导", use_container_width=True):
             st.session_state.current_tab = "CreativePilot"
             st.rerun()
@@ -1759,6 +1780,361 @@ def render_workflow_v2():
             st.rerun()
 
 
+def _wf3_json_default(key: str, data: dict[str, Any]) -> str:
+    """Set initial JSON editor value only once for each workflow step key."""
+    state_key = f"{key}_text"
+    if state_key not in st.session_state:
+        st.session_state[state_key] = json.dumps(data, ensure_ascii=False, indent=2)
+    return st.session_state[state_key]
+
+
+def _wf3_parse_json(text: str, fallback: dict[str, Any]) -> dict[str, Any]:
+    try:
+        return json.loads(text)
+    except Exception:
+        return fallback
+
+
+def render_workflow_studio():
+    st.markdown("### 🧩 工作流（最新）")
+    st.markdown("策略 → KOL搜索/组合 → 建联 → 创意，分步确认并自动串联，避免模块割裂。")
+    st.caption("默认展示为可读卡片。JSON 仅用于高级模式和下载交付。")
+
+    if "wf3_step" not in st.session_state:
+        st.session_state.wf3_step = 1
+        st.session_state.wf3_brief = ""
+        st.session_state.wf3_skills = ["agency-agents", "content-marketing"]
+        st.session_state.wf3_parsed = None
+        st.session_state.wf3_strategy = None
+        st.session_state.wf3_kol_combo = None
+        st.session_state.wf3_selected_kols = []
+        st.session_state.wf3_outreach = []
+        st.session_state.wf3_creative = {}
+
+    steps = ["1) Brief解析", "2) 策略确认", "3) KOL确认", "4) 建联确认", "5) 创意输出"]
+    st.progress(st.session_state.wf3_step / len(steps))
+    st.caption(f"当前进度：{steps[st.session_state.wf3_step - 1]}")
+
+    st.session_state.wf3_brief = st.text_area(
+        "营销Brief",
+        value=st.session_state.wf3_brief,
+        height=120,
+        placeholder="例如：Nike 世界杯主题活动，预算100万，目标品牌曝光，产品Aero-Fit球服...",
+        key="wf3_brief_input",
+    )
+    st.session_state.wf3_skills = st.multiselect(
+        "工作流Skills（全链路生效）",
+        AVAILABLE_SKILLS,
+        default=st.session_state.wf3_skills,
+        key="wf3_skills_selector",
+    )
+    advanced_mode = st.toggle("显示高级JSON编辑器", value=False, key="wf3_advanced_mode")
+
+    # Step 1: Parse
+    st.markdown("#### Step 1. Brief解析（确认基础信息）")
+    col_parse_1, col_parse_2 = st.columns(2)
+    with col_parse_1:
+        if st.button("🔍 解析Brief", type="primary", use_container_width=True, key="wf3_parse_btn"):
+            if not st.session_state.wf3_brief.strip():
+                st.warning("请先输入Brief")
+            else:
+                parsed = parse_brief(st.session_state.wf3_brief)
+                st.session_state.wf3_parsed = parsed
+                st.session_state["wf3_parsed_json_text"] = json.dumps(parsed, ensure_ascii=False, indent=2)
+    with col_parse_2:
+        if st.button("🧹 重置工作台", use_container_width=True, key="wf3_reset_btn"):
+            for k in [k for k in st.session_state.keys() if k.startswith("wf3_")]:
+                del st.session_state[k]
+            st.rerun()
+
+    if st.session_state.wf3_parsed:
+        parsed_text = _wf3_json_default("wf3_parsed_json", st.session_state.wf3_parsed)
+        parsed_data = st.session_state.wf3_parsed
+        info_cols = st.columns(4)
+        with info_cols[0]:
+            st.metric("品牌", parsed_data.get("brand", "未提及"))
+        with info_cols[1]:
+            st.metric("行业", parsed_data.get("industry", "未提及"))
+        with info_cols[2]:
+            st.metric("目标", parsed_data.get("goal", "未提及"))
+        with info_cols[3]:
+            st.metric("预算(万)", parsed_data.get("budget_amount", "未提及"))
+        st.write(f"**目标受众**: {parsed_data.get('target_audience', '未提及')}")
+        if parsed_data.get("key_messages"):
+            st.write(f"**关键信息**: {' / '.join(parsed_data.get('key_messages', [])[:4])}")
+        if parsed_data.get("preferred_platforms"):
+            st.write(f"**优先平台**: {', '.join(parsed_data.get('preferred_platforms', []))}")
+        if advanced_mode:
+            parsed_text = st.text_area(
+                "解析结果JSON（高级模式可编辑）",
+                value=parsed_text,
+                height=220,
+                key="wf3_parsed_json_text",
+            )
+        else:
+            with st.expander("查看原始JSON（只读）"):
+                st.json(parsed_data)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 保存解析修改", use_container_width=True, key="wf3_save_parsed"):
+                if advanced_mode:
+                    st.session_state.wf3_parsed = _wf3_parse_json(parsed_text, st.session_state.wf3_parsed)
+                    st.success("已保存解析修改")
+                else:
+                    st.info("当前为可视化模式，无需保存JSON。切换高级模式后可直接改JSON。")
+        with col2:
+            if st.button("✅ 确认并生成策略", use_container_width=True, key="wf3_confirm_to_strategy"):
+                if advanced_mode:
+                    st.session_state.wf3_parsed = _wf3_parse_json(parsed_text, st.session_state.wf3_parsed)
+                input_data = dict(st.session_state.wf3_parsed)
+                input_data["skills"] = st.session_state.wf3_skills
+                st.session_state.wf3_strategy = generate_strategy(input_data)
+                st.session_state["wf3_strategy_json_text"] = json.dumps(
+                    st.session_state.wf3_strategy, ensure_ascii=False, indent=2
+                )
+                st.session_state.wf3_step = max(st.session_state.wf3_step, 2)
+                st.rerun()
+
+    # Step 2: Strategy confirm
+    if st.session_state.wf3_strategy:
+        st.markdown("#### Step 2. 策略确认（可视化确认后进入KOL）")
+        strategy_text = _wf3_json_default("wf3_strategy_json", st.session_state.wf3_strategy)
+        strategy_data = st.session_state.wf3_strategy
+        st.markdown("**平台策略**")
+        for p in strategy_data.get("platform_strategy", [])[:3]:
+            st.write(f"- **{p.get('name', '平台')}**: {p.get('goal', '')}（{p.get('priority', '中')}优先级）")
+        kol = strategy_data.get("kol_strategy", {})
+        st.markdown("**KOL策略概览**")
+        st.write(
+            f"头部: {kol.get('head_kol', {}).get('count', '0')} | "
+            f"腰部: {kol.get('waist_kol', {}).get('count', '0')} | "
+            f"KOC: {kol.get('koc', {}).get('count', '0')}"
+        )
+        angle = strategy_data.get("communication_angle", {})
+        if angle:
+            st.write(f"**传播主张**: {angle.get('hero_message', 'N/A')}")
+        if advanced_mode:
+            strategy_text = st.text_area(
+                "策略JSON（高级模式可编辑）",
+                value=strategy_text,
+                height=280,
+                key="wf3_strategy_json_text",
+            )
+        else:
+            with st.expander("查看策略原始JSON（只读）"):
+                st.json(strategy_data)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 保存策略修改", use_container_width=True, key="wf3_save_strategy"):
+                if advanced_mode:
+                    st.session_state.wf3_strategy = _wf3_parse_json(strategy_text, st.session_state.wf3_strategy)
+                    st.success("已保存策略修改")
+                else:
+                    st.info("当前为可视化模式，无需保存JSON。")
+        with col2:
+            if st.button("✅ 确认并生成KOL搜索+组合", use_container_width=True, key="wf3_to_kol"):
+                if advanced_mode:
+                    st.session_state.wf3_strategy = _wf3_parse_json(strategy_text, st.session_state.wf3_strategy)
+                parsed = st.session_state.wf3_parsed or {}
+                strategy = st.session_state.wf3_strategy or {}
+                platforms = [p.get("name", "") for p in strategy.get("platform_strategy", []) if p.get("name")]
+                if not platforms:
+                    platforms = parsed.get("preferred_platforms", []) or ["小红书", "抖音"]
+                category = parsed.get("industry", "通用")
+                brand = parsed.get("brand", "品牌")
+                goal = parsed.get("goal", "品牌曝光")
+                budget = parsed.get("budget_amount", 50)
+                try:
+                    budget_num = float(budget)
+                except Exception:
+                    budget_num = 50.0
+
+                search_pool = []
+                for p in platforms[:2]:
+                    search_pool.extend(
+                        search_kols(
+                            platform=p,
+                            category=category,
+                            brand=brand,
+                            product="产品",
+                            target_audience=parsed.get("target_audience", ""),
+                            limit=8,
+                        )
+                    )
+                combo = generate_kol_combo_with_llm(
+                    budget=budget_num,
+                    platforms=platforms[:2],
+                    category=category,
+                    brand=brand,
+                    product="产品",
+                    goal=goal,
+                    skills=st.session_state.wf3_skills,
+                )
+                st.session_state.wf3_kol_pool = search_pool
+                st.session_state.wf3_kol_combo = combo
+                st.session_state["wf3_kol_combo_json_text"] = json.dumps(combo, ensure_ascii=False, indent=2)
+                st.session_state.wf3_step = max(st.session_state.wf3_step, 3)
+                st.rerun()
+
+    # Step 3: KOL confirm
+    if st.session_state.wf3_kol_combo:
+        st.markdown("#### Step 3. KOL确认（人工干预筛选）")
+        combo_text = _wf3_json_default("wf3_kol_combo_json", st.session_state.wf3_kol_combo)
+        combo_data = st.session_state.wf3_kol_combo
+        alloc = combo_data.get("budget_allocation", {})
+        cols = st.columns(3)
+        for i, key in enumerate(["head_kol", "waist_kol", "koc"]):
+            with cols[i]:
+                item = alloc.get(key, {})
+                st.metric(
+                    key.replace("_", " ").upper(),
+                    f"{item.get('amount', 0)}万",
+                    f"{item.get('percentage', 0)}%",
+                )
+        if advanced_mode:
+            combo_text = st.text_area(
+                "KOL组合JSON（高级模式可编辑）",
+                value=combo_text,
+                height=260,
+                key="wf3_kol_combo_json_text",
+            )
+        else:
+            with st.expander("查看KOL组合原始JSON（只读）"):
+                st.json(combo_data)
+        if st.button("💾 保存KOL组合修改", key="wf3_save_kol_combo"):
+            if advanced_mode:
+                st.session_state.wf3_kol_combo = _wf3_parse_json(combo_text, st.session_state.wf3_kol_combo)
+                st.success("已保存KOL组合修改")
+            else:
+                st.info("当前为可视化模式，无需保存JSON。")
+
+        combo = _wf3_parse_json(combo_text, st.session_state.wf3_kol_combo) if advanced_mode else st.session_state.wf3_kol_combo
+        candidates = []
+        for k in combo.get("recommended_head", []):
+            candidates.append(("head", k))
+        for k in combo.get("recommended_waist", []):
+            candidates.append(("waist", k))
+        for k in st.session_state.get("wf3_kol_pool", []):
+            candidates.append(("search", k))
+
+        unique = {}
+        for t, k in candidates:
+            name = k.get("name")
+            if name and name not in unique:
+                unique[name] = (t, k)
+        options = list(unique.keys())
+        default_pick = options[:5] if len(options) >= 5 else options
+        selected_names = st.multiselect(
+            "选择进入建联的KOL（支持人工干预）",
+            options=options,
+            default=st.session_state.get("wf3_selected_kol_names", default_pick),
+            key="wf3_selected_kol_names",
+        )
+        st.session_state.wf3_selected_kols = [unique[n][1] for n in selected_names if n in unique]
+
+        if st.button("✅ 确认KOL并生成建联话术", type="primary", key="wf3_to_outreach"):
+            parsed = st.session_state.wf3_parsed or {}
+            brand = parsed.get("brand", "品牌")
+            product = "产品"
+            msgs = []
+            for kol in st.session_state.wf3_selected_kols[:8]:
+                platform = kol.get("platform", "小红书")
+                msg = generate_outreach_with_llm(
+                    kol_name=kol.get("name", "KOL"),
+                    kol_profile=kol,
+                    brand=brand,
+                    brand_intro=f"致力于提供优质{product}",
+                    product=product,
+                    platform=platform,
+                    style="professional",
+                    cooperation_type="内容合作",
+                    budget_range="面议",
+                    skills=st.session_state.wf3_skills,
+                )
+                msgs.append({"kol": kol.get("name", "KOL"), "platform": platform, "message": msg})
+            st.session_state.wf3_outreach = msgs
+            st.session_state.wf3_step = max(st.session_state.wf3_step, 4)
+            st.rerun()
+
+    # Step 4: Outreach confirm
+    if st.session_state.wf3_outreach:
+        st.markdown("#### Step 4. 建联确认（可改文案）")
+        for i, row in enumerate(st.session_state.wf3_outreach):
+            with st.expander(f"{i+1}. {row.get('kol')} ({row.get('platform')})", expanded=(i == 0)):
+                msg = row.get("message", {}) or {}
+                subj_key = f"wf3_outreach_subj_{i}"
+                body_key = f"wf3_outreach_body_{i}"
+                default_subj = msg.get("subject", "")
+                default_body = msg.get("full_message", msg.get("body", ""))
+                new_subj = st.text_input("主题", value=st.session_state.get(subj_key, default_subj), key=subj_key)
+                new_body = st.text_area("正文", value=st.session_state.get(body_key, default_body), height=180, key=body_key)
+                row["message"]["subject"] = new_subj
+                row["message"]["full_message"] = new_body
+
+        if st.button("✅ 确认建联并生成创意Brief", type="primary", key="wf3_to_creative"):
+            parsed = st.session_state.wf3_parsed or {}
+            strategy = st.session_state.wf3_strategy or {}
+            platforms = [p.get("name", "") for p in strategy.get("platform_strategy", []) if p.get("name")]
+            if not platforms:
+                platforms = parsed.get("preferred_platforms", []) or ["小红书"]
+            creative_map = {}
+            for p in platforms[:2]:
+                creative_map[p] = generate_creative_brief_with_llm(
+                    brand=parsed.get("brand", "品牌"),
+                    product="产品",
+                    platform=p,
+                    kol_style="真实分享",
+                    key_messages=parsed.get("key_messages", []),
+                    must_include=["产品展示", "使用体验"],
+                    forbidden=["竞品对比", "绝对化用语"],
+                    target_audience=parsed.get("target_audience", "目标受众"),
+                    campaign_goal=parsed.get("goal", "品牌曝光"),
+                    industry=parsed.get("industry", "通用"),
+                    skills=st.session_state.wf3_skills,
+                    kol_profile=(st.session_state.wf3_selected_kols[0] if st.session_state.wf3_selected_kols else {}),
+                )
+            st.session_state.wf3_creative = creative_map
+            st.session_state.wf3_step = 5
+            st.rerun()
+
+    # Step 5: Final package
+    if st.session_state.wf3_step >= 5 and st.session_state.wf3_creative:
+        st.markdown("#### Step 5. 最终交付包（视觉展示 + JSON下载）")
+        final_package = {
+            "brief_parsed": st.session_state.wf3_parsed,
+            "strategy": st.session_state.wf3_strategy,
+            "kol_combo": st.session_state.wf3_kol_combo,
+            "selected_kols": st.session_state.wf3_selected_kols,
+            "outreach_messages": st.session_state.wf3_outreach,
+            "creative_briefs": st.session_state.wf3_creative,
+            "skills": st.session_state.wf3_skills,
+        }
+        final_text = json.dumps(final_package, ensure_ascii=False, indent=2)
+        st.success("已完成全链路生成。你可以直接下载执行包，或展开查看原始JSON。")
+        creative_map = st.session_state.wf3_creative
+        st.markdown("**创意输出概览**")
+        for platform, brief in creative_map.items():
+            with st.expander(f"{platform} 创意Brief", expanded=False):
+                info = brief.get("project_info", {})
+                st.write(f"品牌: {info.get('brand', '')} | 产品: {info.get('product', '')}")
+                llm_brief = brief.get("llm_brief", {})
+                cs = llm_brief.get("content_strategy", {})
+                if cs:
+                    st.write(f"核心信息: {cs.get('core_message', 'N/A')}")
+                    st.write(f"内容角度: {cs.get('content_angle', 'N/A')}")
+                else:
+                    st.write("已生成平台创意指导。")
+        with st.expander("查看完整原始JSON"):
+            st.json(final_package)
+        st.download_button(
+            "📥 下载一体化执行包(JSON)",
+            data=final_text,
+            file_name=f"workflow_v3_package_{int(time.time())}.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+
+
 # ============================================
 # 主函数
 # ============================================
@@ -1775,8 +2151,7 @@ def main():
     # 主内容区
     tabs = {
         "首页": render_home,
-        "工作流V2": render_workflow_v2,
-        "工作流": render_workflow,
+        "工作流": render_workflow_studio,
         "StrategyIQ": render_strategy_iq,
         "MatchAI": render_match_ai,
         "ConnectBot": render_connect_bot,
@@ -1785,30 +2160,14 @@ def main():
     
     # 导航
     current_tab = st.session_state.get("current_tab", "首页")
+    if current_tab in {"工作流工作台", "工作流V2"}:
+        current_tab = "工作流"
+        st.session_state.current_tab = "工作流"
     
     if current_tab in tabs:
         tabs[current_tab]()
     else:
         render_home()
-    
-    # 底部导航（仅在小屏幕显示）
-    st.divider()
-    nav_cols = st.columns(7)
-    nav_items = [
-        ("🏠 首页", "首页"),
-        ("🔄 V2", "工作流V2"),
-        ("🔄 工作流", "工作流"),
-        ("🧠 策略", "StrategyIQ"),
-        ("🎯 KOL", "MatchAI"),
-        ("✉️ 建联", "ConnectBot"),
-        ("🎨 创意", "CreativePilot"),
-    ]
-    
-    for i, (label, tab_name) in enumerate(nav_items):
-        with nav_cols[i]:
-            if st.button(label, key=f"nav_{tab_name}", use_container_width=True):
-                st.session_state.current_tab = tab_name
-                st.rerun()
 
 
 if __name__ == "__main__":
