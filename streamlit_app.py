@@ -1795,6 +1795,30 @@ def _wf3_parse_json(text: str, fallback: dict[str, Any]) -> dict[str, Any]:
         return fallback
 
 
+def _wf3_build_user_research(parsed: dict[str, Any]) -> dict[str, Any]:
+    """Build editable user-research draft from parsed brief."""
+    audience = parsed.get("target_audience", "未提及")
+    key_messages = parsed.get("key_messages", []) or ["产品核心卖点"]
+    return {
+        "persona_profile": {
+            "target_audience": audience,
+            "dimensions": ["年龄", "性别", "收入", "城市层级", "社会关系"],
+        },
+        "behavior_habits": [
+            "高频浏览社媒并关注真实体验内容",
+            "决策前会对比测评与口碑",
+        ],
+        "scenario_insights": [
+            f"围绕{key_messages[0]}的高频使用场景中，用户更关注效果稳定与可信证据",
+            "在关键时刻场景下，用户对“可感知收益”更敏感",
+        ],
+        "emotional_insights": [
+            "用户希望通过消费表达个人身份与态度",
+            "可引发群体认同的内容更易触发分享",
+        ],
+    }
+
+
 def render_workflow_studio():
     st.markdown("### 🧩 工作流（最新）")
     st.markdown("策略 → KOL搜索/组合 → 建联 → 创意，分步确认并自动串联，避免模块割裂。")
@@ -1805,13 +1829,14 @@ def render_workflow_studio():
         st.session_state.wf3_brief = ""
         st.session_state.wf3_skills = ["agency-agents", "content-marketing"]
         st.session_state.wf3_parsed = None
+        st.session_state.wf3_user_research = None
         st.session_state.wf3_strategy = None
         st.session_state.wf3_kol_combo = None
         st.session_state.wf3_selected_kols = []
         st.session_state.wf3_outreach = []
         st.session_state.wf3_creative = {}
 
-    steps = ["1) Brief解析", "2) 策略确认", "3) KOL确认", "4) 建联确认", "5) 创意输出"]
+    steps = ["1) Brief解析", "2) 用研确认", "3) 策略确认", "4) KOL确认", "5) 建联确认", "6) 创意输出"]
     st.progress(st.session_state.wf3_step / len(steps))
     st.caption(f"当前进度：{steps[st.session_state.wf3_step - 1]}")
 
@@ -1883,21 +1908,86 @@ def render_workflow_studio():
                 else:
                     st.info("当前为可视化模式，无需保存JSON。切换高级模式后可直接改JSON。")
         with col2:
-            if st.button("✅ 确认并生成策略", use_container_width=True, key="wf3_confirm_to_strategy"):
+            if st.button("✅ 确认并进入用研步骤", use_container_width=True, key="wf3_confirm_to_research"):
                 if advanced_mode:
                     st.session_state.wf3_parsed = _wf3_parse_json(parsed_text, st.session_state.wf3_parsed)
-                input_data = dict(st.session_state.wf3_parsed)
-                input_data["skills"] = st.session_state.wf3_skills
-                st.session_state.wf3_strategy = generate_strategy(input_data)
-                st.session_state["wf3_strategy_json_text"] = json.dumps(
-                    st.session_state.wf3_strategy, ensure_ascii=False, indent=2
+                st.session_state.wf3_user_research = _wf3_build_user_research(st.session_state.wf3_parsed or {})
+                st.session_state["wf3_user_research_json_text"] = json.dumps(
+                    st.session_state.wf3_user_research, ensure_ascii=False, indent=2
                 )
                 st.session_state.wf3_step = max(st.session_state.wf3_step, 2)
                 st.rerun()
 
-    # Step 2: Strategy confirm
+    # Step 2: User research confirm
+    if st.session_state.wf3_user_research:
+        st.markdown("#### Step 2. 用户研究确认（先确认再产出策略）")
+        research_text = _wf3_json_default("wf3_user_research_json", st.session_state.wf3_user_research)
+        research_data = st.session_state.wf3_user_research
+        persona = research_data.get("persona_profile", {})
+        st.write(f"**目标受众**: {persona.get('target_audience', '未提及')}")
+        st.write(f"**画像维度**: {', '.join(persona.get('dimensions', []))}")
+        st.markdown("**行为习惯**")
+        for x in research_data.get("behavior_habits", [])[:3]:
+            st.write(f"- {x}")
+        st.markdown("**场景洞察**")
+        for x in research_data.get("scenario_insights", [])[:3]:
+            st.write(f"- {x}")
+        st.markdown("**情感洞察**")
+        for x in research_data.get("emotional_insights", [])[:3]:
+            st.write(f"- {x}")
+
+        if advanced_mode:
+            research_text = st.text_area(
+                "用户研究JSON（高级模式可编辑）",
+                value=research_text,
+                height=260,
+                key="wf3_user_research_json_text",
+            )
+        else:
+            with st.expander("查看用户研究原始JSON（只读）"):
+                st.json(research_data)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 保存用研修改", use_container_width=True, key="wf3_save_research"):
+                if advanced_mode:
+                    st.session_state.wf3_user_research = _wf3_parse_json(research_text, st.session_state.wf3_user_research)
+                    st.success("已保存用研修改")
+                else:
+                    st.info("当前为可视化模式，无需保存JSON。")
+        with col2:
+            if st.button("✅ 确认用研并生成策略", use_container_width=True, key="wf3_research_to_strategy"):
+                if advanced_mode:
+                    st.session_state.wf3_user_research = _wf3_parse_json(research_text, st.session_state.wf3_user_research)
+                input_data = dict(st.session_state.wf3_parsed or {})
+                input_data["skills"] = st.session_state.wf3_skills
+                input_data["user_research_confirmed"] = st.session_state.wf3_user_research
+                st.session_state.wf3_strategy = generate_strategy(input_data)
+                # 以用户确认版用研覆盖策略中的用研模块
+                if isinstance(st.session_state.wf3_strategy, dict):
+                    st.session_state.wf3_strategy["audience_research"] = {
+                        "segments": [
+                            {
+                                "name": "核心消费人群",
+                                "profile": st.session_state.wf3_user_research.get("persona_profile", {}).get("target_audience", "未提及"),
+                                "habits": st.session_state.wf3_user_research.get("behavior_habits", []),
+                                "product_linked_lifestyles": st.session_state.wf3_user_research.get("scenario_insights", []),
+                                "core_tensions": st.session_state.wf3_user_research.get("emotional_insights", []),
+                            }
+                        ],
+                        "insights": st.session_state.wf3_user_research.get("scenario_insights", []),
+                    }
+                    if "market_strategy_framework" in st.session_state.wf3_strategy:
+                        st.session_state.wf3_strategy["market_strategy_framework"]["user_research"] = st.session_state.wf3_user_research
+                st.session_state["wf3_strategy_json_text"] = json.dumps(
+                    st.session_state.wf3_strategy, ensure_ascii=False, indent=2
+                )
+                st.session_state.wf3_step = max(st.session_state.wf3_step, 3)
+                st.rerun()
+
+    # Step 3: Strategy confirm
     if st.session_state.wf3_strategy:
-        st.markdown("#### Step 2. 策略确认（可视化确认后进入KOL）")
+        st.markdown("#### Step 3. 策略确认（可视化确认后进入KOL）")
         strategy_text = _wf3_json_default("wf3_strategy_json", st.session_state.wf3_strategy)
         strategy_data = st.session_state.wf3_strategy
         st.markdown("**平台策略**")
@@ -1973,12 +2063,12 @@ def render_workflow_studio():
                 st.session_state.wf3_kol_pool = search_pool
                 st.session_state.wf3_kol_combo = combo
                 st.session_state["wf3_kol_combo_json_text"] = json.dumps(combo, ensure_ascii=False, indent=2)
-                st.session_state.wf3_step = max(st.session_state.wf3_step, 3)
+                st.session_state.wf3_step = max(st.session_state.wf3_step, 4)
                 st.rerun()
 
-    # Step 3: KOL confirm
+    # Step 4: KOL confirm
     if st.session_state.wf3_kol_combo:
-        st.markdown("#### Step 3. KOL确认（人工干预筛选）")
+        st.markdown("#### Step 4. KOL确认（人工干预筛选）")
         combo_text = _wf3_json_default("wf3_kol_combo_json", st.session_state.wf3_kol_combo)
         combo_data = st.session_state.wf3_kol_combo
         alloc = combo_data.get("budget_allocation", {})
@@ -2053,12 +2143,12 @@ def render_workflow_studio():
                 )
                 msgs.append({"kol": kol.get("name", "KOL"), "platform": platform, "message": msg})
             st.session_state.wf3_outreach = msgs
-            st.session_state.wf3_step = max(st.session_state.wf3_step, 4)
+            st.session_state.wf3_step = max(st.session_state.wf3_step, 5)
             st.rerun()
 
-    # Step 4: Outreach confirm
+    # Step 5: Outreach confirm
     if st.session_state.wf3_outreach:
-        st.markdown("#### Step 4. 建联确认（可改文案）")
+        st.markdown("#### Step 5. 建联确认（可改文案）")
         for i, row in enumerate(st.session_state.wf3_outreach):
             with st.expander(f"{i+1}. {row.get('kol')} ({row.get('platform')})", expanded=(i == 0)):
                 msg = row.get("message", {}) or {}
@@ -2094,14 +2184,15 @@ def render_workflow_studio():
                     kol_profile=(st.session_state.wf3_selected_kols[0] if st.session_state.wf3_selected_kols else {}),
                 )
             st.session_state.wf3_creative = creative_map
-            st.session_state.wf3_step = 5
+            st.session_state.wf3_step = 6
             st.rerun()
 
-    # Step 5: Final package
-    if st.session_state.wf3_step >= 5 and st.session_state.wf3_creative:
-        st.markdown("#### Step 5. 最终交付包（视觉展示 + JSON下载）")
+    # Step 6: Final package
+    if st.session_state.wf3_step >= 6 and st.session_state.wf3_creative:
+        st.markdown("#### Step 6. 最终交付包（视觉展示 + JSON下载）")
         final_package = {
             "brief_parsed": st.session_state.wf3_parsed,
+            "user_research_confirmed": st.session_state.wf3_user_research,
             "strategy": st.session_state.wf3_strategy,
             "kol_combo": st.session_state.wf3_kol_combo,
             "selected_kols": st.session_state.wf3_selected_kols,
