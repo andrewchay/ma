@@ -25,12 +25,14 @@ SAMPLE_KOLS = {
     "小红书": [
         {"name": "@美妆达人小美", "followers": "50万", "engagement": "8.5%", "category": "美妆", "price": "3万", "city": "上海", "recent_posts": ["口红试色", "护肤日常"], "brand_history": ["花西子", "完美日记"]},
         {"name": "@护肤分享师", "followers": "30万", "engagement": "9.2%", "category": "美妆", "price": "2万", "city": "杭州", "recent_posts": ["成分分析", "敏感肌护理"], "brand_history": ["薇诺娜", "理肤泉"]},
+        {"name": "@球场穿搭研究所", "followers": "120万", "engagement": "7.9%", "category": "运动鞋服", "price": "9万", "city": "上海", "recent_posts": ["球衣穿搭", "世界杯战袍解析"], "brand_history": ["Nike", "Adidas"]},
         {"name": "@生活方式博主", "followers": "80万", "engagement": "6.8%", "category": "生活方式", "price": "5万", "city": "北京", "recent_posts": ["日常vlog", "好物分享"], "brand_history": ["无印良品", "宜家"]},
         {"name": "@母婴博主乐乐", "followers": "40万", "engagement": "10.1%", "category": "母婴", "price": "2.5万", "city": "广州", "recent_posts": ["育儿经验", "宝宝辅食"], "brand_history": ["贝亲", "帮宝适"]},
         {"name": "@数码测评君", "followers": "60万", "engagement": "7.5%", "category": "3C", "price": "4万", "city": "深圳", "recent_posts": ["手机评测", "数码开箱"], "brand_history": ["小米", "华为"]},
     ],
     "抖音": [
         {"name": "@时尚小姐姐", "followers": "200万", "engagement": "5.2%", "category": "时尚", "price": "15万", "city": "上海", "recent_posts": ["穿搭分享", "变装视频"], "brand_history": ["ZARA", "H&M"]},
+        {"name": "@足球热血剪辑", "followers": "260万", "engagement": "6.3%", "category": "运动鞋服", "price": "18万", "city": "北京", "recent_posts": ["世界杯名场面", "球衣测评"], "brand_history": ["Nike", "Puma"]},
         {"name": "@搞笑日常", "followers": "500万", "engagement": "4.8%", "category": "娱乐", "price": "30万", "city": "成都", "recent_posts": ["搞笑段子", "生活日常"], "brand_history": []},
         {"name": "@美食探店", "followers": "150万", "engagement": "6.5%", "category": "美食", "price": "10万", "city": "重庆", "recent_posts": ["探店视频", "美食制作"], "brand_history": ["海底捞", "喜茶"]},
         {"name": "@科技大人", "followers": "300万", "engagement": "5.8%", "category": "3C", "price": "20万", "city": "北京", "recent_posts": ["科技评测", "产品开箱"], "brand_history": ["苹果", "三星"]},
@@ -63,6 +65,68 @@ SAMPLE_KOLS = {
         {"name": "@SportScienceRun", "followers": "130万", "engagement": "5.3%", "category": "运动鞋服", "price": "7万", "city": "London", "recent_posts": ["performance footwear", "game day prep"], "brand_history": ["Nike", "Puma"]},
     ],
 }
+
+# 行业到可接受类目的映射（避免严格相等导致回退到不相关KOL）
+INDUSTRY_CATEGORY_MAP: dict[str, set[str]] = {
+    "运动鞋服": {"运动鞋服", "运动", "时尚", "体育"},
+    "美妆": {"美妆", "时尚", "生活方式"},
+    "母婴": {"母婴", "生活方式"},
+    "3C": {"3C", "科技", "数码"},
+    "快消": {"生活方式", "美食", "时尚"},
+    "宠物科技": {"宠物科技", "生活方式"},
+    "通用": {"生活方式", "时尚", "3C", "美妆", "母婴", "运动鞋服"},
+}
+
+
+def _allowed_categories(industry_or_category: str | None) -> set[str]:
+    normalized = normalize_industry(industry_or_category or "通用")
+    return INDUSTRY_CATEGORY_MAP.get(normalized, INDUSTRY_CATEGORY_MAP["通用"])
+
+
+def _is_category_match(kol_category: str, industry_or_category: str | None) -> bool:
+    if not industry_or_category:
+        return True
+    return str(kol_category) in _allowed_categories(industry_or_category)
+
+
+def _fallback_kols_for_industry(platforms: list[str], industry_or_category: str) -> list[dict[str, Any]]:
+    allowed = _allowed_categories(industry_or_category)
+    picked: list[dict[str, Any]] = []
+    for p in platforms:
+        for kol in SAMPLE_KOLS.get(p, []):
+            if kol.get("category") in allowed:
+                picked.append(kol)
+    return picked
+
+
+def _sanitize_combo_by_industry(result: dict[str, Any], platforms: list[str], industry_or_category: str) -> dict[str, Any]:
+    """Filter LLM combo output by industry relevance and backfill from local pool if needed."""
+    if not isinstance(result, dict):
+        return result
+    allowed = _allowed_categories(industry_or_category)
+    fallback_pool = _fallback_kols_for_industry(platforms, industry_or_category)
+    fallback_head = [k for k in fallback_pool if parse_followers(k.get("followers", "0")) >= 1_000_000]
+    fallback_waist = [k for k in fallback_pool if 100_000 <= parse_followers(k.get("followers", "0")) < 1_000_000]
+    if not fallback_waist:
+        fallback_waist = [k for k in fallback_pool if parse_followers(k.get("followers", "0")) > 0]
+
+    def _fix_list(items: list[dict[str, Any]] | None, backup: list[dict[str, Any]], need: int) -> list[dict[str, Any]]:
+        items = items or []
+        filtered = [x for x in items if x.get("category") in allowed or not x.get("category")]
+        if len(filtered) >= need:
+            return filtered
+        existing = {x.get("name") for x in filtered}
+        for k in backup:
+            if k.get("name") not in existing:
+                filtered.append(k)
+                existing.add(k.get("name"))
+            if len(filtered) >= need:
+                break
+        return filtered
+
+    result["recommended_head"] = _fix_list(result.get("recommended_head"), fallback_head, 2)
+    result["recommended_waist"] = _fix_list(result.get("recommended_waist"), fallback_waist, 4)
+    return result
 
 
 def analyze_kol_with_llm(kol_data: dict, brand: str, product: str, target_audience: str) -> dict[str, Any]:
@@ -101,15 +165,6 @@ KOL信息：
     try:
         result = llm.complete(prompt, system_prompt=system_prompt, json_mode=True)
         if isinstance(result, dict) and "error" not in result:
-            template = get_industry_template(
-                normalize_industry(category),
-                any(p in {"TikTok", "Instagram", "YouTube", "Facebook"} for p in platforms),
-            )
-            result.setdefault("industry_template", {
-                "industry": template.get("industry"),
-                "tier_mix": template.get("tier_mix"),
-                "must_track_metrics": template.get("must_track_metrics", []),
-            })
             return result
     except Exception:
         pass
@@ -204,7 +259,7 @@ def search_kols(
     results = []
     for kol in platform_kols:
         # 分类筛选
-        if category and kol["category"] != category:
+        if category and not _is_category_match(kol.get("category", ""), category):
             continue
         
         # 城市筛选
@@ -390,6 +445,7 @@ def generate_kol_combo_with_llm(
     try:
         result = llm.complete(prompt, system_prompt=system_prompt, json_mode=True)
         if isinstance(result, dict) and "error" not in result:
+            result = _sanitize_combo_by_industry(result, platforms, category)
             result.setdefault("applied_skills", skill_ctx.get("applied_skills", []))
             return result
     except Exception:
@@ -414,11 +470,15 @@ def _rule_based_combo(
         all_kols.extend(SAMPLE_KOLS.get(platform, []))
     
     # 按分类筛选
-    category_kols = [k for k in all_kols if k["category"] == category] or all_kols
+    category_kols = [k for k in all_kols if _is_category_match(k.get("category", ""), category)]
+    if not category_kols:
+        category_kols = _fallback_kols_for_industry(platforms, category)
     
     # 分配到不同层级
     head_kols = [k for k in category_kols if parse_followers(k["followers"]) >= 1000000][:2]
     waist_kols = [k for k in category_kols if 100000 <= parse_followers(k["followers"]) < 1000000][:8]
+    if not waist_kols:
+        waist_kols = [k for k in category_kols if parse_followers(k.get("followers", "0")) > 0][:8]
     platform_ratio = _allocate_platform_ratio(platforms)
     normalized_industry = normalize_industry(category)
     case_playbook = derive_case_playbook({
