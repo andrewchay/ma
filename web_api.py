@@ -359,15 +359,13 @@ async def api_ai_proxy(req: AIPromptRequest):
     """Generic AI proxy for fallback prompts not covered by specific endpoints."""
     client = get_llm_client()
     try:
-        response = client.chat.completions.create(
-            model=os.environ.get("LLM_MODEL", "gpt-4o-mini"),
+        content = client.chat(
             messages=[
                 {"role": "system", "content": req.system_prompt},
                 {"role": "user", "content": req.prompt},
             ],
             temperature=req.temperature,
         )
-        content = response.choices[0].message.content
         return {"ok": True, "content": content}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
