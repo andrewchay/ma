@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow - 智能营销传播工作流</title>
+    
+    <!-- 引入PDF.js库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // PDF.js加载检测
+        window.pdfJsLoaded = false;
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            window.pdfJsLoaded = true;
+        } else {
+            console.warn('PDF.js未加载成功，将使用备选方案');
+        }
+    </script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #1F3864;
+            --secondary: #2E74B5;
+            --accent: #4472C4;
+            --success: #548235;
+            --warning: #C55A11;
+            --bg: #F5F6FA;
+            --text: #333;
+            --light: #fff;
+            --border: #E0E0E0;
+        }
+        body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        
+        /* Header */
+        .header { background: var(--primary); color: var(--light); padding: 15px 30px; display: flex; align-items: center; justify-content: space-between; }
+        .logo { font-size: 24px; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+        .logo svg { width: 32px; height: 32px; }
+        .nav { display: flex; gap: 5px; }
+        .nav-item { padding: 10px 20px; border-radius: 6px; cursor: pointer; transition: all 0.3s; color: rgba(255,255,255,0.8); border: none; background: transparent; font-size: 14px; }
+        .nav-item:hover { background: rgba(255,255,255,0.1); }
+        .nav-item.active { background: var(--accent); color: var(--light); }
+        
+        /* Main Container */
+        .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
+        
+        /* Cards */
+        .card { background: var(--light); border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-title { font-size: 18px; font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        .card-title svg { width: 24px; height: 24px; }
+        
+        /* Tabs */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        .tab { padding: 10px 20px; border-radius: 6px 6px 0 0; cursor: pointer; border: none; background: transparent; color: var(--text); font-size: 14px; transition: all 0.3s; }
+        .tab:hover { background: var(--bg); }
+        .tab.active { background: var(--primary); color: var(--light); }
+        
+        /* Form Elements */
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; font-weight: 500; color: var(--text); }
+        .form-input, .form-textarea, .form-select { width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; transition: border-color 0.3s, background-color 0.3s; }
+        .form-input:focus, .form-textarea:focus, .form-select:focus { outline: none; border-color: var(--accent); }
+        .form-input.filled, .form-textarea.filled { background-color: rgba(84, 130, 53, 0.1); border-color: var(--success); }
+        .form-textarea { min-height: 100px; resize: vertical; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        
+        /* Buttons */
+        .btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: var(--primary); color: var(--light); }
+        .btn-primary:hover { background: var(--secondary); }
+        .btn-secondary { background: var(--accent); color: var(--light); }
+        .btn-secondary:hover { background: var(--secondary); }
+        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background: var(--primary); color: var(--light); }
+        .btn-sm { padding: 8px 16px; font-size: 13px; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        /* File Upload */
+        .file-upload { border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .file-upload:hover { border-color: var(--accent); background: rgba(68,114,196,0.05); }
+        .file-upload.dragover { border-color: var(--success); background: rgba(84,130,53,0.1); }
+        .file-upload svg { width: 48px; height: 48px; color: var(--accent); margin-bottom: 15px; }
+        .file-upload input { display: none; }
+        .file-name { margin-top: 10px; font-size: 14px; color: var(--success); }
+        
+        /* Tables */
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--primary); color: var(--light); font-weight: 500; }
+        tr:hover { background: var(--bg); }
+        .table-actions { display: flex; gap: 8px; }
+        
+        /* Tags */
+        .tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; margin: 2px; }
+        .tag-primary { background: rgba(31,56,100,0.1); color: var(--primary); }
+        .tag-success { background: rgba(84,130,53,0.1); color: var(--success); }
+        .tag-warning { background: rgba(197,90,17,0.1); color: var(--warning); }
+        
+        /* Loading */
+        .loading { display: flex; align-items: center; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* AI Response */
+        .ai-response { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 12px; padding: 20px; margin-top: 20px; }
+        .ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; color: var(--primary); font-weight: bold; }
+        .ai-content { line-height: 1.8; white-space: pre-wrap; }
+        .ai-content h3 { color: var(--primary); margin: 15px 0 10px; }
+        .ai-content ul { margin-left: 20px; }
+        .ai-content li { margin: 5px 0; }
+        
+        /* KOL Cards */
+        .kol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .kol-card { background: var(--light); border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.3s; }
+        .kol-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+        .kol-header { display: flex; gap: 15px; margin-bottom: 15px; }
+        .kol-avatar { width: 60px; height: 60px; border-radius: 50%; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .kol-info h4 { color: var(--primary); margin-bottom: 5px; }
+        .kol-platform { font-size: 12px; color: #666; }
+        .kol-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 15px 0; }
+        .kol-stat { text-align: center; padding: 10px; background: var(--bg); border-radius: 8px; }
+        .kol-stat-value { font-size: 18px; font-weight: bold; color: var(--primary); }
+        .kol-stat-label { font-size: 11px; color: #666; }
+        .kol-price { font-size: 20px; font-weight: bold; color: var(--warning); text-align: center; margin: 10px 0; }
+        
+        /* Combination Cards */
+        .combo-card { background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border: 2px solid var(--accent); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .combo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .combo-title { font-size: 16px; font-weight: bold; color: var(--primary); }
+        .combo-type { padding: 5px 15px; border-radius: 20px; font-size: 12px; background: var(--accent); color: var(--light); }
+        .combo-kols { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+        .combo-kol { display: flex; align-items: center; gap: 8px; padding: 8px 15px; background: var(--bg); border-radius: 20px; font-size: 13px; }
+        .combo-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; padding: 15px; background: rgba(68,114,196,0.1); border-radius: 8px; }
+        .combo-stat { text-align: center; }
+        .combo-stat-value { font-size: 20px; font-weight: bold; color: var(--primary); }
+        .combo-stat-label { font-size: 11px; color: #666; }
+        
+        /* Content Suggestions */
+        .content-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .content-card { background: var(--light); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .content-preview { height: 200px; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; }
+        .content-body { padding: 20px; }
+        .content-type { display: inline-block; padding: 4px 12px; border-radius: 4px; font-size: 12px; margin-bottom: 10px; }
+        .content-type.image { background: rgba(197,90,17,0.1); color: var(--warning); }
+        .content-type.video { background: rgba(68,114,196,0.1); color: var(--accent); }
+        .content-title { font-weight: bold; color: var(--primary); margin-bottom: 10px; }
+        .content-desc { font-size: 13px; color: #666; line-height: 1.6; }
+        
+        /* Message Templates */
+        .message-card { background: var(--bg); border-radius: 8px; padding: 15px; margin: 10px 0; border-left: 4px solid var(--accent); }
+        .message-type { font-size: 12px; color: var(--accent); margin-bottom: 5px; }
+        .message-content { font-size: 14px; line-height: 1.6; }
+        .message-tip { background: rgba(84,130,53,0.1); padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 13px; color: var(--success); }
+        
+        /* Editable Content */
+        .editable { border: 1px solid transparent; padding: 10px; border-radius: 6px; transition: all 0.3s; cursor: text; }
+        .editable:hover { border-color: var(--accent); background: rgba(68,114,196,0.05); }
+        .editable:focus { outline: none; border-color: var(--accent); background: rgba(68,114,196,0.1); }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--light); border-radius: 12px; padding: 30px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 18px; font-weight: bold; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; }
+        
+        /* Utility */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .mt-20 { margin-top: 20px; }
+        .mb-20 { margin-bottom: 20px; }
+        .hidden { display: none; }
+        .flex { display: flex; }
+        .gap-10 { gap: 10px; }
+        .gap-20 { gap: 20px; }
+        
+        /* Step Indicator */
+        .steps { display: flex; justify-content: center; margin-bottom: 30px; }
+        .step { display: flex; align-items: center; }
+        .step-num { width: 36px; height: 36px; border-radius: 50%; background: var(--border); color: var(--text); display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .step.active .step-num { background: var(--primary); color: var(--light); }
+        .step.done .step-num { background: var(--success); color: var(--light); }
+        .step-label { margin-left: 10px; color: #666; }
+        .step.active .step-label { color: var(--primary); font-weight: bold; }
+        .step-line { width: 60px; height: 2px; background: var(--border); margin: 0 15px; }
+        
+        /* Project List */
+        .project-item { display: flex; align-items: center; padding: 15px; border-radius: 8px; margin-bottom: 10px; background: var(--bg); cursor: pointer; transition: all 0.3s; }
+        .project-item:hover { background: rgba(68,114,196,0.1); }
+        .project-item.active { background: rgba(68,114,196,0.2); border: 2px solid var(--accent); }
+        .project-icon { width: 40px; height: 40px; border-radius: 8px; background: var(--primary); color: var(--light); display: flex; align-items: center; justify-content: center; margin-right: 15px; }
+        .project-info { flex: 1; }
+        .project-name { font-weight: bold; color: var(--primary); }
+        .project-date { font-size: 12px; color: #666; }
+        .project-status { padding: 4px 12px; border-radius: 20px; font-size: 11px; }
+        .project-status.draft { background: rgba(197,90,17,0.1); color: var(--warning); }
+        .project-status.active { background: rgba(84,130,53,0.1); color: var(--success); }
+        
+        /* Sidebar */
+        .layout { display: flex; gap: 20px; }
+        .sidebar { width: 280px; flex-shrink: 0; }
+        .sidebar .card { position: sticky; top: 20px; }
+        .main-content { flex: 1; }
+        
+        /* Summary Stats */
+        .summary-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .summary-stat { background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: var(--light); padding: 20px; border-radius: 12px; text-align: center; }
+        .summary-stat-value { font-size: 28px; font-weight: bold; }
+        .summary-stat-label { font-size: 12px; opacity: 0.9; }
+        
+        /* Parsing Status */
+        .parsing-status { padding: 15px; border-radius: 8px; margin-top: 15px; display: flex; align-items: center; gap: 10px; }
+        .parsing-status.info { background: rgba(68,114,196,0.1); border-left: 4px solid var(--accent); }
+        .parsing-status.success { background: rgba(84,130,53,0.1); border-left: 4px solid var(--success); }
+        .parsing-status.error { background: rgba(197,90,17,0.1); border-left: 4px solid var(--warning); }
+        
+        /* Extracted text preview */
+        .extracted-text { background: #f5f5f5; border-radius: 8px; padding: 15px; margin-top: 15px; max-height: 150px; overflow-y: auto; font-size: 12px; line-height: 1.6; white-space: pre-wrap; }
+        
+        /* Extracted Info Preview */
+        .extracted-preview { background: rgba(68,114,196,0.05); border-radius: 8px; padding: 15px; margin-top: 15px; }
+        .extracted-item { display: flex; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+        .extracted-item:last-child { border-bottom: none; }
+        .extracted-label { font-weight: 500; width: 100px; color: var(--primary); }
+        .extracted-value { flex: 1; color: var(--text); }
+        .extracted-value.filled { color: var(--success); }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+<svg viewBox="0 0 32 32" fill="currentColor"><path d="M16 2C8.27 2 2 8.27 2 16s6.27 14 14 14 14-6.27 14-14S23.73 2 16 2zm0 4c5.52 0 10 4.48 10 10s-4.48 10-10 10S6 21.52 6 16 10.48 6 16 6zm-2 4v6l5 3 .75-1.25-4.25-2.55V10h-1.5z"/></svg>
+            Flow
+        </div>
+        <nav class="nav">
+            <button class="nav-item active" data-page="brief">Brief分析</button>
+            <button class="nav-item" data-page="kol">KOL筛选</button>
+            <button class="nav-item" data-page="contact">建联沟通</button>
+            <button class="nav-item" data-page="content">内容生成</button>
+        </nav>
+    </header>
+    
+    <div class="container">
+        <!-- Page: Brief Analysis -->
+        <div id="page-brief" class="page">
+            <div class="layout">
+                <aside class="sidebar">
+                    <div class="card">
+                        <div class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            项目列表
+                        </div>
+                        <div id="project-list"></div>
+                        <button class="btn btn-primary" style="width:100%; margin-top:15px" onclick="createNewProject()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            新建项目
+                        </button>
+                    </div>
+                </aside>
+                <main class="main-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                上传客户Brief
+                            </div>
+                        </div>
+                        <div class="file-upload" id="file-upload-area">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <p>点击或拖拽文件上传</p>
+                            <p style="font-size:12px; color:#999">支持 Word、PDF、图片格式（PNG/JPG）</p>
+                            <input type="file" id="brief-file" accept=".doc,.docx,.pdf,.jpg,.jpeg,.png" onchange="handleFileUpload(this)">
+                            <div id="file-name" class="file-name"></div>
+                        </div>
+                        
+                        <!-- 解析状态显示 -->
+                        <div id="parsing-status" class="parsing-status info hidden">
+                            <span id="parsing-message">正在处理...</span>
+                        </div>
+                        
+                        <!-- 提取的原文预览 -->
+                        <div id="extracted-text-container" class="hidden">
+                            <div style="font-weight: 500; color: var(--primary); margin-top: 15px; font-size: 13px;">📄 从文件中提取的文字内容：</div>
+                            <div id="extracted-text" class="extracted-text"></div>
+                        </div>
+                        
+                        <!-- 提取信息预览 -->
+                        <div id="extracted-preview" class="extracted-preview hidden">
+                            <h4 style="color: var(--primary); margin-bottom: 10px; font-size: 14px;">📋 已识别的Brief信息</h4>
+                            <div id="extracted-items"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                Brief信息录入 <span style="font-size: 12px; color: #999; font-weight: normal;">（上传文件后可自动填充）</span>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">品牌名称</label>
+                                <input type="text" class="form-input" id="brand-name" placeholder="如：元气森林">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">产品名称</label>
+                                <input type="text" class="form-input" id="product-name" placeholder="如：气泡水">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">产品核心卖点</label>
+                            <textarea class="form-textarea" id="product-features" placeholder="描述产品的核心卖点和差异化优势..."></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">传播目的</label>
+                                <select class="form-select" id="campaign-goal">
+                                    <option value="">请选择</option>
+                                    <option value="brand">品牌曝光</option>
+                                    <option value="sales">直接带货</option>
+                                    <option value="awareness">新品认知</option>
+                                    <option value="repurchase">促进复购</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">预算范围（万元）</label>
+                                <select class="form-select" id="budget-range">
+                                    <option value="">请选择</option>
+                                    <option value="5-10">5-10万</option>
+                                    <option value="10-20">10-20万</option>
+                                    <option value="20-50">20-50万</option>
+                                    <option value="50+">50万以上</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">目标CPM（元）</label>
+                                <input type="number" class="form-input" id="target-cpm" placeholder="如：50">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">目标CPE（元）</label>
+                                <input type="number" class="form-input" id="target-cpe" placeholder="如：5">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">已有主题（如有）</label>
+                            <input type="text" class="form-input" id="existing-theme" placeholder="客户已确定的主题方向">
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                AI智能分析
+                            </div>
+                            <button class="btn btn-primary" onclick="generateBriefAnalysis()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                生成传播方案
+                            </button>
+                        </div>
+                        <div id="brief-analysis-result"></div>
+                    </div>
+                </main>
+            </div>
+        </div>
+        
+        <!-- Page: KOL Selection -->
+        <div id="page-kol" class="page hidden">
+            <div class="summary-stats">
+                <div class="summary-stat">
+                    <div class="summary-stat-value" id="kol-total">0</div>
+                    <div class="summary-stat-label">候选KOL</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-value" id="kol-filtered">0</div>
+                    <div class="summary-stat-label">符合条件</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-value" id="kol-combos">0</div>
+                    <div class="summary-stat-label">组合方案</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-value" id="kol-selected">0</div>
+                    <div class="summary-stat-label">已选KOL</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                        KOL数据库
+                    </div>
+                    <div class="flex gap-10">
+                        <select class="form-select" id="kol-platform" style="width:150px" onchange="filterKOLs()">
+                            <option value="">全部平台</option>
+                            <option value="xiaohongshu">小红书</option>
+                            <option value="bilibili">B站</option>
+                            <option value="douyin">抖音</option>
+                            <option value="weibo">微博</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="generateKOLCombinations()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            智能组合
+                        </button>
+                    </div>
+                </div>
+                <div id="kol-grid" class="kol-grid"></div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                        组合方案
+                    </div>
+                </div>
+                <div id="combo-list"></div>
+            </div>
+        </div>
+        
+        <!-- Page: Contact -->
+        <div id="page-contact" class="page hidden">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                        已选KOL（待建联）
+                    </div>
+                    <button class="btn btn-primary" onclick="generateAllMessages()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        生成全部话术
+                    </button>
+                </div>
+                <div id="selected-kol-list"></div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        沟通话术模板
+                    </div>
+                </div>
+                <div id="message-templates"></div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        谈判技巧
+                    </div>
+                </div>
+                <div id="negotiation-tips"></div>
+            </div>
+        </div>
+        
+        <!-- Page: Content -->
+        <div id="page-content" class="page hidden">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        已选投放KOL
+                    </div>
+                    <button class="btn btn-primary" onclick="generateAllContent()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        生成全部内容
+                    </button>
+                </div>
+                <div id="content-kol-list"></div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                        内容创意参考
+                    </div>
+                </div>
+                <div id="content-suggestions" class="content-grid"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- KOL Detail Modal -->
+    <div class="modal" id="kol-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">KOL详情</div>
+                <button class="modal-close" onclick="closeModal('kol-modal')">&times;</button>
+            </div>
+            <div id="kol-modal-content"></div>
+        </div>
+    </div>
+    
+    <script>
+        // ====== State ======
+        const state = {
+            currentProject: null,
+            projects: JSON.parse(localStorage.getItem('flow_projects') || '[]'),
+            selectedKOLs: [],
+            kolDatabase: []
+        };
+        
+        // Local API backend - no hardcoded keys needed
+        
+        // 设置PDF.js worker（只在加载成功时设置）
+        if (window.pdfJsLoaded) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+        
+        // ====== Initialize ======
+        document.addEventListener('DOMContentLoaded', () => {
+            initNavigation();
+            initKOLDatabase();
+            renderProjectList();
+            initDragDrop();
+        });
+        
+        function initNavigation() {
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const page = btn.dataset.page;
+                    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+                    document.getElementById(`page-${page}`).classList.remove('hidden');
+                    
+// 切换页面时更新显示
+                    if (page === 'kol') {
+                        updateStats();
+                        updateSelectedKOLDisplays();
+                    } else if (page === 'contact') {
+                        updateSelectedKOLDisplays();
+                    } else if (page === 'content') {
+                        updateSelectedKOLDisplays();
+                    }
+                });
+            });
+        }
+        
+        // ====== Drag and Drop Support ======
+        function initDragDrop() {
+            const uploadArea = document.getElementById('file-upload-area');
+            if (!uploadArea) return;
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    document.getElementById('brief-file').files = files;
+                    handleFileUpload(document.getElementById('brief-file'));
+                }
+            });
+            
+            uploadArea.addEventListener('click', () => {
+                document.getElementById('brief-file').click();
+            });
+        }
+        
+        // ====== Project Management ======
+        function createNewProject() {
+            const name = prompt('请输入项目名称：');
+            if (!name) return;
+            const project = {
+                id: Date.now(),
+                name,
+                createdAt: new Date().toISOString(),
+                brief: {},
+                selectedKOLs: [],
+                status: 'draft'
+            };
+            state.projects.push(project);
+            saveProjects();
+            renderProjectList();
+            state.currentProject = project;
+        }
+        
+        function selectProject(id) {
+            state.currentProject = state.projects.find(p => p.id === id);
+            state.selectedKOLs = state.currentProject?.selectedKOLs || [];
+            renderProjectList();
+            updateSelectedKOLDisplays();
+            updateStats();
+        }
+        
+        function renderProjectList() {
+            const container = document.getElementById('project-list');
+            if (!container) return;
+            container.innerHTML = state.projects.map(p => `
+                <div class="project-item ${state.currentProject?.id === p.id ? 'active' : ''}" onclick="selectProject(${p.id})">
+                    <div class="project-icon">📋</div>
+                    <div class="project-info">
+                        <div class="project-name">${p.name}</div>
+                        <div class="project-date">${new Date(p.createdAt).toLocaleDateString()}</div>
+                    </div>
+                    <span class="project-status ${p.status}">${p.status === 'draft' ? '草稿' : '进行中'}</span>
+                </div>
+            `).join('');
+        }
+        
+        function saveProjects() {
+            localStorage.setItem('flow_projects', JSON.stringify(state.projects));
+        }
+        
+        // ====== File Upload & Parsing ======
+        async function handleFileUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const fileName = file.name.toLowerCase();
+            const fileType = file.type;
+            const isImage = fileType.startsWith('image/') || fileName.match(/\.(jpg|jpeg|png|gif|webp)$/);
+            const isPDF = fileType === 'application/pdf' || fileName.endsWith('.pdf');
+            const isWord = fileName.endsWith('.docx') || fileName.endsWith('.doc');
+            
+            // 显示文件名
+            document.getElementById('file-name').textContent = `已选择: ${file.name}`;
+            
+            // 隐藏之前的结果
+            document.getElementById('extracted-preview').classList.add('hidden');
+            document.getElementById('extracted-text-container').classList.add('hidden');
+            
+            // 显示解析状态
+            updateParsingStatus('info', '⏳ 正在读取文件...');
+            
+            try {
+                // 图片和PDF直接发送给AI解析
+                if (isImage) {
+                    updateParsingStatus('info', '⏳ 正在识别图片文字...');
+                } else if (isPDF) {
+                    updateParsingStatus('info', '⏳ 正在处理PDF文件...');
+                }
+                
+                // 调用AI直接解析文件
+                const briefInfo = await analyzeBriefWithAIFromFile(file, fileName, isImage, isPDF, isWord);
+                
+                // 自动填充表单
+                autoFillForm(briefInfo);
+                
+                // 显示提取的信息预览
+                showExtractedPreview(briefInfo);
+                
+                updateParsingStatus('success', '✅ Brief文件解析完成！请检查表单中的信息是否正确');
+                
+            } catch (error) {
+                console.error('文件解析错误:', error);
+                updateParsingStatus('error', '❌ 解析失败: ' + error.message);
+            }
+        }
+        
+        // ====== AI直接解析文件（图片/PDF/Word/文本） ======
+        async function analyzeBriefWithAIFromFile(file, fileName, isImage, isPDF, isWord) {
+            updateParsingStatus('info', '⏳ 正在AI分析Brief内容...');
+            
+            try {
+                // 如果是图片，转换为base64
+                let imageBase64 = null;
+                if (isImage) {
+                    imageBase64 = await fileToBase64(file);
+                }
+                
+                // 构建发送给AI的消息
+                const systemPrompt = `你是一个专业的品牌营销Brief分析助手。请从Brief内容中提取以下信息并以JSON格式返回：
+{
+    "brand": "品牌名称",
+    "product": "产品名称", 
+    "features": "产品核心卖点",
+    "goal": "传播目的 (brand/sales/awareness/repurchase)",
+    "budget": "预算范围 (5-10/10-20/20-50/50+)",
+    "cpm": "目标CPM数值",
+    "cpe": "目标CPE数值",
+    "theme": "已有主题方向"
+}
+注意：
+1. 只返回JSON格式
+2. 如果某项信息没有提及，用空字符串 ""
+3. goal只能是: brand, sales, awareness, repurchase
+4. budget只能是: 5-10, 10-20, 20-50, 50+`;
+
+                const userPrompt = isImage 
+                    ? `请分析这张Brief文档图片，提取所有文字信息并识别品牌、产品、预算等关键信息。`
+                    : (isPDF 
+                        ? `请分析这个PDF文档，提取所有文字信息并识别品牌、产品、预算等关键信息。`
+                        : `请分析这个Word文档内容，提取所有文字信息并识别品牌、产品、预算等关键信息。\n\n文档内容：\n${await extractTextFromWord(file)}`);
+
+                // 如果是图片，使用图像理解API
+                if (isImage && imageBase64) {
+                    const ocrResponse = await Promise.race([
+                        fetch('/api/ai-proxy', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                prompt: `图片base64: ${imageBase64.substring(0,100)}... 请完整提取这张图片中的所有文字内容。这是一份品牌营销Brief文档，请逐字提取所有文字。`,
+                                system_prompt: '你是一位专业的OCR助手，擅长提取图片中的文字。',
+                                temperature: 0.3
+                            })
+                        }),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('图片识别超时，请稍后重试或尝试上传Word文档')), 60000)
+                        )
+                    ]);
+                    
+                    const ocrData = await ocrResponse.json();
+                    const extractedText = ocrData.content || '';
+                    
+                    // 显示提取的原文
+                    document.getElementById('extracted-text').textContent = extractedText || '(未能提取到文字)';
+                    document.getElementById('extracted-text-container').classList.remove('hidden');
+                    
+                    if (extractedText.length < 10) {
+                        throw new Error('图片文字识别失败，请尝试上传Word文档或截图后重试');
+                    }
+                    
+                    // 用提取的文字进行AI分析
+                    return await analyzeBriefWithAI(extractedText, fileName);
+                }
+                
+                // 如果是PDF，尝试用PDF.js提取文字
+                if (isPDF) {
+                    let extractedText = '';
+                    if (window.pdfJsLoaded) {
+                        try {
+                            extractedText = await extractTextFromPDF(file);
+                        } catch (e) {
+                            console.warn('PDF.js提取失败:', e);
+                        }
+                    }
+                    
+                    if (!extractedText || extractedText.length < 20) {
+                        // 尝试用FileReader读取
+                        extractedText = await extractTextFromPDFWithTimeout(file);
+                    }
+                    
+                    // 显示提取的原文
+                    document.getElementById('extracted-text').textContent = extractedText;
+                    document.getElementById('extracted-text-container').classList.remove('hidden');
+                    
+                    if (extractedText.includes('扫描件')) {
+                        throw new Error('此PDF为扫描件无法识别，请转换为Word文档或截图后上传');
+                    }
+                    
+                    return await analyzeBriefWithAI(extractedText, fileName);
+                }
+                
+                // Word文档
+                if (isWord) {
+                    const extractedText = await extractTextFromWord(file);
+                    document.getElementById('extracted-text').textContent = extractedText || '(未能提取到文字)';
+                    document.getElementById('extracted-text-container').classList.remove('hidden');
+                    return await analyzeBriefWithAI(extractedText, fileName);
+                }
+                
+                // 其他文本文件
+                const extractedText = await extractTextFromText(file);
+                document.getElementById('extracted-text').textContent = extractedText;
+                document.getElementById('extracted-text-container').classList.remove('hidden');
+                return await analyzeBriefWithAI(extractedText, fileName);
+                
+            } catch (error) {
+                throw new Error(error.message || 'AI分析失败');
+            }
+        }
+        
+        // ====== Extract Text from PDF ======
+        async function extractTextFromPDF(file) {
+            updateParsingStatus('info', '⏳ 正在解析PDF文件...');
+            
+            // 检查PDF.js是否加载成功
+            if (!window.pdfJsLoaded || typeof pdfjsLib === 'undefined') {
+                console.warn('PDF.js未加载，使用备用方案');
+                return await extractTextFromPDFWithTimeout(file);
+            }
+            
+            // 带超时的PDF解析
+            try {
+                const arrayBuffer = await Promise.race([
+                    file.arrayBuffer(),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('PDF读取超时，请稍后重试')), 30000)
+                    )
+                ]);
+                
+                const pdf = await Promise.race([
+                    pdfjsLib.getDocument({ data: arrayBuffer }).promise,
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('PDF解析超时，请稍后重试')), 30000)
+                    )
+                ]);
+                
+                let fullText = '';
+                const totalPages = pdf.numPages;
+                
+                for (let i = 1; i <= totalPages; i++) {
+                    updateParsingStatus('info', `⏳ 正在解析PDF第 ${i}/${totalPages} 页...`);
+                    
+                    const page = await Promise.race([
+                        pdf.getPage(i),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('PDF页面解析超时')), 10000)
+                        )
+                    ]);
+                    
+                    const textContent = await Promise.race([
+                        page.getTextContent(),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('PDF文字提取超时')), 10000)
+                        )
+                    ]);
+                    
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n\n';
+                }
+                
+                return fullText.trim();
+            } catch (error) {
+                console.error('PDF解析错误:', error);
+                updateParsingStatus('info', '⚠️ PDF文字提取遇到问题，尝试备用方案...');
+                return await extractTextFromPDFWithTimeout(file);
+            }
+        }
+        
+        // 备用方案：带超时的文本提取
+        async function extractTextFromPDFWithTimeout(file) {
+            return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('PDF处理超时，请尝试上传Word或图片格式'));
+                }, 20000);
+                
+                try {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        clearTimeout(timeout);
+                        const text = e.target.result;
+                        const readableText = text.replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s.,;:!?。，；：！？""''（）【】《》\-]/g, ' ')
+                            .replace(/\s+/g, ' ')
+                            .trim();
+                        if (readableText.length > 20) {
+                            resolve(readableText);
+                        } else {
+                            resolve('【此PDF为扫描件，建议转换为Word文档或截图后上传】');
+                        }
+                    };
+                    reader.onerror = () => {
+                        clearTimeout(timeout);
+                        reject(new Error('PDF文件读取失败'));
+                    };
+                    reader.readAsText(file);
+                } catch (err) {
+                    clearTimeout(timeout);
+                    reject(err);
+                }
+            });
+        }
+        
+        // ====== Extract Text from Word ======
+        async function extractTextFromWord(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    let text = e.target.result;
+                    text = text.replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s.,;:!?。，；：！？""''（）【】《》\-]/g, ' ');
+                    text = text.replace(/\s+/g, ' ').trim();
+                    resolve(text || '');
+                };
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+        
+        // ====== Extract Text from Text File ======
+        async function extractTextFromText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+        
+        // ====== Helper: File to Base64 ======
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // ====== Analyze Brief with AI ======
+        async function analyzeBriefWithAI(text, fileName) {
+            if (!text || text.length < 10) {
+                throw new Error('提取的文字内容太少，无法进行分析');
+            }
+            
+            try {
+                const response = await fetch('/api/analyze-brief', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text.substring(0, 8000), filename: fileName })
+                });
+                const data = await response.json();
+                if (!data.ok) {
+                    throw new Error(data.error || '分析失败');
+                }
+                return data.data || {};
+            } catch (error) {
+                throw new Error('AI分析失败: ' + error.message);
+            }
+        }
+        
+        // ====== Update Parsing Status ======
+        function updateParsingStatus(type, message) {
+            const statusDiv = document.getElementById('parsing-status');
+            if (!statusDiv) return;
+            statusDiv.className = `parsing-status ${type}`;
+            statusDiv.classList.remove('hidden');
+            document.getElementById('parsing-message').textContent = message;
+        }
+        
+        // ====== Auto Fill Form ======
+        function autoFillForm(briefInfo) {
+            const mappings = {
+                'brand-name': briefInfo.brand,
+                'product-name': briefInfo.product,
+                'product-features': briefInfo.features,
+                'campaign-goal': briefInfo.goal,
+                'budget-range': briefInfo.budget,
+                'target-cpm': briefInfo.cpm,
+                'target-cpe': briefInfo.cpe,
+                'existing-theme': briefInfo.theme
+            };
+            
+            for (const [fieldId, value] of Object.entries(mappings)) {
+                if (value && String(value).trim() !== '' && String(value).trim() !== '""') {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        field.value = String(value).trim();
+                        field.classList.add('filled');
+                    }
+                }
+            }
+        }
+        
+        // ====== Show Extracted Preview ======
+        function showExtractedPreview(briefInfo) {
+            const previewDiv = document.getElementById('extracted-preview');
+            const itemsDiv = document.getElementById('extracted-items');
+            
+            const fields = [
+                { label: '品牌名称', value: briefInfo.brand },
+                { label: '产品名称', value: briefInfo.product },
+                { label: '核心卖点', value: briefInfo.features },
+                { label: '传播目的', value: getGoalText(briefInfo.goal) },
+                { label: '预算范围', value: getBudgetText(briefInfo.budget) },
+                { label: '目标CPM', value: briefInfo.cpm },
+                { label: '目标CPE', value: briefInfo.cpe },
+                { label: '已有主题', value: briefInfo.theme }
+            ].filter(f => f.value && String(f.value).trim() !== '' && String(f.value).trim() !== '""');
+            
+            if (fields.length === 0) {
+                previewDiv.classList.add('hidden');
+                return;
+            }
+            
+            itemsDiv.innerHTML = fields.map(field => `
+                <div class="extracted-item">
+                    <div class="extracted-label">${field.label}</div>
+                    <div class="extracted-value filled">${field.value}</div>
+                </div>
+            `).join('');
+            
+            previewDiv.classList.remove('hidden');
+        }
+        
+        function getGoalText(goal) {
+            const goals = { 'brand': '品牌曝光', 'sales': '直接带货', 'awareness': '新品认知', 'repurchase': '促进复购' };
+            return goals[goal] || goal;
+        }
+        
+        function getBudgetText(budget) {
+            const budgets = { '5-10': '5-10万', '10-20': '10-20万', '20-50': '20-50万', '50+': '50万以上' };
+            return budgets[budget] || budget;
+        }
+        
+        // ====== Brief Analysis ======
+        async function generateBriefAnalysis() {
+            const brand = document.getElementById('brand-name').value;
+            const product = document.getElementById('product-name').value;
+            const features = document.getElementById('product-features').value;
+            const goal = document.getElementById('campaign-goal').value;
+            const budget = document.getElementById('budget-range').value;
+            const cpm = document.getElementById('target-cpm').value;
+            const cpe = document.getElementById('target-cpe').value;
+            const theme = document.getElementById('existing-theme').value;
+            
+            if (!brand || !product) {
+                alert('请至少填写品牌名称和产品名称');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('brief-analysis-result');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            
+            const prompt = `请基于以下Brief信息，生成完整的传播方案：
+【品牌信息】
+- 品牌：${brand}
+- 产品：${product}
+- 核心卖点：${features || '待补充'}
+【需求信息】
+- 传播目的：${goal || '待确定'}
+- 预算范围：${budget || '待确定'}
+- 目标CPM：${cpm || '待确定'}元
+- 目标CPE：${cpe || '待确定'}元
+- 已有主题：${theme || '无，客户未指定'}
+
+请输出以下内容：
+1. 用户研究（核心用户画像：年龄、兴趣、消费习惯等）
+2. 竞品分析（至少3个竞品，简要分析其传播策略）
+3. 传播策略建议（包括主题方向）
+4. 创意内容方向建议（3-5个方向）
+5. 推荐平台优先级
+
+请使用清晰的Markdown格式输出。`;
+            
+            try {
+                const response = await fetch('/api/generate-analysis', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ brand, product, features, goal, budget, cpm, cpe, theme })
+                });
+                const data = await response.json();
+                if (!data.ok) {
+                    throw new Error(data.error || '生成失败');
+                }
+                const result = data.result.markdown || '生成失败，请重试';
+                const sessionPath = data.result.session_path || '';
+                
+                resultDiv.innerHTML = `
+                    <div class="ai-response">
+                        <div class="ai-header">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            AI传播方案
+                        </div>
+                        <div class="ai-content editable" contenteditable="true" id="editable-analysis">
+                            ${result.replace(/\n/g, '<br>').replace(/^#{1,3}\s(.+)$/gm, '<h3>$1</h3>')}
+                        </div>
+                        <div class="mt-20 text-right">
+                            <button class="btn btn-outline btn-sm" onclick="saveAnalysis()">保存方案</button>
+                        </div>
+                    </div>
+                    ${sessionPath ? `<div style="margin-top:10px;font-size:12px;color:#666;">Session: ${sessionPath}</div>` : ''}
+                `;
+                
+                // 保存到项目
+                if (state.currentProject) {
+                    state.currentProject.brief = { brand, product, features, goal, budget, cpm, cpe, theme, analysis: result };
+                    state.currentProject.status = 'active';
+                    state.currentProject.sessionPath = sessionPath;
+                    saveProjects();
+                    renderProjectList();
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="ai-response" style="border-left-color: var(--warning);"><div class="ai-header" style="color: var(--warning);">生成失败</div><div class="ai-content">错误信息：${error.message}</div></div>`;
+            }
+        }
+        
+        function saveAnalysis() {
+            const content = document.getElementById('editable-analysis')?.innerText;
+            if (content && state.currentProject) {
+                state.currentProject.brief.analysis = content;
+                saveProjects();
+                alert('方案已保存');
+            }
+        }
+        
+        // ====== KOL Database ======
+        function initKOLDatabase() {
+            state.kolDatabase = [
+                { id: 1, name: '小A爱生活', platform: 'xiaohongshu', avatar: '👩', followers: 520000, avgViews: 45000, avgEngagement: 3200, price: 15000, tags: ['美妆', '护肤', '生活方式'], style: '亲和友好型', bio: '专注成分党护肤分享' },
+                { id: 2, name: '科技小王子', platform: 'bilibili', avatar: '👨‍💻', followers: 1800000, avgViews: 120000, avgEngagement: 8500, price: 45000, tags: ['数码', '科技', '评测'], style: '商业直球型', bio: '硬核数码评测up主' },
+                { id: 3, name: '美食小当家', platform: 'xiaohongshu', avatar: '🍳', followers: 380000, avgViews: 38000, avgEngagement: 2800, price: 12000, tags: ['美食', '探店', '日常'], style: '情感共鸣型', bio: '吃货一枚，热衷分享美食' },
+                { id: 4, name: '时尚女王', platform: 'douyin', avatar: '👗', followers: 2500000, avgViews: 200000, avgEngagement: 15000, price: 80000, tags: ['时尚', '穿搭', '美妆'], style: '专业严谨型', bio: '10年时尚编辑经验' },
+                { id: 5, name: '健身达人Leo', platform: 'xiaohongshu', avatar: '💪', followers: 280000, avgViews: 25000, avgEngagement: 2100, price: 10000, tags: ['健身', '运动', '健康'], style: '商业直球型', bio: '减脂训练干货分享' },
+                { id: 6, name: '旅行家小鱼', platform: 'xiaohongshu', avatar: '✈️', followers: 450000, avgViews: 42000, avgEngagement: 3500, price: 18000, tags: ['旅行', '生活方式', '摄影'], style: '情感共鸣型', bio: '带着相机去旅行' },
+                { id: 7, name: '萌宠日记', platform: 'douyin', avatar: '🐶', followers: 3200000, avgViews: 280000, avgEngagement: 22000, price: 95000, tags: ['萌宠', '动物', '搞笑'], style: '亲和友好型', bio: '记录毛孩子的日常' },
+                { id: 8, name: '职场小阿姨', platform: 'xiaohongshu', avatar: '💼', followers: 190000, avgViews: 18000, avgEngagement: 1500, price: 8000, tags: ['职场', '成长', '女性'], style: '专业严谨型', bio: '职场晋升干货分享' },
+                { id: 9, name: '家居美学', platform: 'bilibili', avatar: '🏠', followers: 950000, avgViews: 85000, avgEngagement: 6200, price: 35000, tags: ['家居', '装修', '生活'], style: '情感共鸣型', bio: '打造温馨小窝' },
+                { id: 10, name: '母婴育儿圈', platform: 'xiaohongshu', avatar: '👶', followers: 420000, avgViews: 38000, avgEngagement: 2900, price: 14000, tags: ['母婴', '育儿', '教育'], style: '亲和友好型', bio: '新手宝妈的育儿记录' }
+            ];
+            renderKOLs();
+            updateStats();
+        }
+        
+        function renderKOLs(kols = state.kolDatabase) {
+            const grid = document.getElementById('kol-grid');
+            if (!grid) return;
+            
+            const platform = document.getElementById('kol-platform')?.value;
+            const filtered = platform ? kols.filter(k => k.platform === platform) : kols;
+            
+            grid.innerHTML = filtered.map(kol => `
+                <div class="kol-card">
+                    <div class="kol-header">
+                        <div class="kol-avatar">${kol.avatar}</div>
+                        <div class="kol-info">
+                            <h4>${kol.name}</h4>
+                            <div class="kol-platform">${getPlatformName(kol.platform)} · ${kol.style}</div>
+                        </div>
+                    </div>
+                    <div class="kol-stats">
+                        <div class="kol-stat">
+                            <div class="kol-stat-value">${formatNumber(kol.followers)}</div>
+                            <div class="kol-stat-label">粉丝</div>
+                        </div>
+                        <div class="kol-stat">
+                            <div class="kol-stat-value">${formatNumber(kol.avgViews)}</div>
+                            <div class="kol-stat-label">场均曝光</div>
+                        </div>
+                        <div class="kol-stat">
+                            <div class="kol-stat-value">${formatNumber(kol.avgEngagement)}</div>
+                            <div class="kol-stat-label">场均互动</div>
+                        </div>
+                        <div class="kol-stat">
+                            <div class="kol-stat-value">¥${kol.price/10000}w</div>
+                            <div class="kol-stat-label">报价</div>
+                        </div>
+                    </div>
+                    <div class="tag tag-primary">${kol.tags.slice(0, 2).join(' · ')}</div>
+                    <div class="kol-price">¥${kol.price.toLocaleString()}</div>
+                    <div class="flex gap-10">
+                        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="toggleKOL(${kol.id})">
+                            ${state.selectedKOLs.includes(kol.id) ? '✓ 已选' : '选择'}
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="showKOLDetail(${kol.id})">详情</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('kol-total').textContent = state.kolDatabase.length;
+            document.getElementById('kol-filtered').textContent = filtered.length;
+        }
+        
+        function filterKOLs() {
+            renderKOLs();
+        }
+        
+        function toggleKOL(id) {
+            const index = state.selectedKOLs.indexOf(id);
+            if (index > -1) {
+                state.selectedKOLs.splice(index, 1);
+            } else {
+                state.selectedKOLs.push(id);
+            }
+            if (state.currentProject) {
+                state.currentProject.selectedKOLs = state.selectedKOLs;
+                saveProjects();
+            }
+            renderKOLs();
+            updateStats();
+            updateSelectedKOLDisplays();
+        }
+        
+        function updateStats() {
+            const selected = document.getElementById('kol-selected');
+            if (selected) selected.textContent = state.selectedKOLs.length;
+        }
+        
+        function updateSelectedKOLDisplays() {
+            const selected = state.kolDatabase.filter(k => state.selectedKOLs.includes(k.id));
+            
+            // Contact page
+            const selectedKolList = document.getElementById('selected-kol-list');
+            if (selectedKolList) {
+                selectedKolList.innerHTML = selected.length ? selected.map(kol => `
+                    <div class="message-card">
+                        <div class="flex gap-10" style="align-items:center">
+                            <span style="font-size:24px">${kol.avatar}</span>
+                            <div>
+                                <strong>${kol.name}</strong>
+                                <span class="tag tag-primary" style="margin-left:10px">${getPlatformName(kol.platform)}</span>
+                            </div>
+                            <button class="btn btn-outline btn-sm" onclick="generateContactMessage(${kol.id})" style="margin-left:auto">生成话术</button>
+                        </div>
+                    </div>
+                `).join('') : '<p style="color:#999; text-align:center">请先在KOL筛选中选择博主</p>';
+            }
+            
+            // Content page
+            const contentKolList = document.getElementById('content-kol-list');
+            if (contentKolList) {
+                contentKolList.innerHTML = selected.length ? selected.map(kol => `
+                    <div class="message-card">
+                        <div class="flex gap-10" style="align-items:center">
+                            <span style="font-size:24px">${kol.avatar}</span>
+                            <div>
+                                <strong>${kol.name}</strong>
+                                <div style="font-size:12px; color:#666">${kol.bio}</div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="generateKOLContent(${kol.id})" style="margin-left:auto">生成内容</button>
+                        </div>
+                    </div>
+                `).join('') : '<p style="color:#999; text-align:center">请先在KOL筛选中选择博主</p>';
+            }
+        }
+        
+        function showKOLDetail(id) {
+            const kol = state.kolDatabase.find(k => k.id === id);
+            document.getElementById('kol-modal-content').innerHTML = `
+                <div class="kol-header" style="margin-bottom:20px">
+                    <div class="kol-avatar" style="width:80px; height:80px; font-size:36px">${kol.avatar}</div>
+                    <div class="kol-info">
+                        <h4 style="font-size:20px">${kol.name}</h4>
+                        <div class="kol-platform" style="font-size:14px">${getPlatformName(kol.platform)} · ${kol.style}</div>
+                    </div>
+                </div>
+                <p style="margin-bottom:15px; color:#666">${kol.bio}</p>
+                <div class="kol-stats">
+                    <div class="kol-stat">
+                        <div class="kol-stat-value">${formatNumber(kol.followers)}</div>
+                        <div class="kol-stat-label">粉丝数</div>
+                    </div>
+                    <div class="kol-stat">
+                        <div class="kol-stat-value">${formatNumber(kol.avgViews)}</div>
+                        <div class="kol-stat-label">场均曝光</div>
+                    </div>
+                    <div class="kol-stat">
+                        <div class="kol-stat-value">${formatNumber(kol.avgEngagement)}</div>
+                        <div class="kol-stat-label">场均互动</div>
+                    </div>
+                    <div class="kol-stat">
+                        <div class="kol-stat-value">¥${(kol.price/10000).toFixed(1)}w</div>
+                        <div class="kol-stat-label">报价</div>
+                    </div>
+                </div>
+                <div style="margin:15px 0">
+                    <strong>预估数据：</strong>
+                    <div style="margin-top:10px; padding:15px; background:#f5f5f5; border-radius:8px">
+                        <div>CPM预估：¥${(kol.price / kol.avgViews * 1000).toFixed(2)}</div>
+                        <div>CPE预估：¥${(kol.price / kol.avgEngagement).toFixed(2)}</div>
+                    </div>
+                </div>
+                <div>
+                    <strong>标签：</strong>
+                    <div style="margin-top:10px">${kol.tags.map(t => `<span class="tag tag-primary">${t}</span>`).join('')}</div>
+                </div>
+            `;
+            document.getElementById('kol-modal').classList.add('active');
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+        
+        // ====== KOL Combinations ======
+        async function generateKOLCombinations() {
+            const selected = state.kolDatabase.filter(k => state.selectedKOLs.includes(k.id));
+            if (selected.length < 2) {
+                alert('请至少选择2个KOL进行组合');
+                return;
+            }
+            
+            const container = document.getElementById('combo-list');
+            if (!container) return;
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            
+            const prompt = `基于以下已选KOL，请生成3-4个不同组合方案：
+已选KOL：
+${selected.map(k => `- ${k.name}(${getPlatformName(k.platform)}): 粉丝${formatNumber(k.followers)}, 报价¥${k.price.toLocaleString()}, 场均曝光${formatNumber(k.avgViews)}, 场均互动${formatNumber(k.avgEngagement)}`).join('\n')}
+项目背景：
+- 品牌：${state.currentProject?.brief?.brand || '待定'}
+- 产品：${state.currentProject?.brief?.product || '待定'}
+- 传播目的：${state.currentProject?.brief?.goal || '待定'}
+- 预算：${state.currentProject?.brief?.budget || '待定'}
+- 目标CPM：${state.currentProject?.brief?.cpm || '待定'}元
+- 目标CPE：${state.currentProject?.brief?.cpe || '待定'}元
+
+请生成以下组合方案：
+1. 性价比组合（侧重低成本高互动）
+2. 声量组合（侧重高曝光高触达）
+3. 垂直组合（侧重深度垂人群）
+4. 均衡组合（兼顾声量与互动）
+
+每个组合请包含：组合名称、选择理由、预计总花费、总曝光、总互动、组合CPM、组合CPE。`;
+            
+            const result = await callMinimaxAI(prompt, '你是一位专业的KOL投放策略师，擅长根据预算和目标进行KOL组合优化。');
+            
+            // Call backend for structured combo + session
+            let backendCombo = { result: {} };
+            try {
+                const beRes = await fetch('/api/generate-kols', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        selected,
+                        brand: state.currentProject?.brief?.brand || '',
+                        product: state.currentProject?.brief?.product || '',
+                        goal: state.currentProject?.brief?.goal || '',
+                        budget: state.currentProject?.brief?.budget || '',
+                        cpm: state.currentProject?.brief?.cpm || '',
+                        cpe: state.currentProject?.brief?.cpe || '',
+                    })
+                });
+                backendCombo = await beRes.json();
+                if (backendCombo.ok && backendCombo.result.session_path) {
+                    state.currentProject.sessionPath = backendCombo.result.session_path;
+                    saveProjects();
+                }
+            } catch (e) { console.error('backend kol error', e); }
+
+            // Calculate actual data
+            const totalPrice = selected.reduce((sum, k) => sum + k.price, 0);
+            const totalViews = selected.reduce((sum, k) => sum + k.avgViews, 0);
+            const totalEngagement = selected.reduce((sum, k) => sum + k.avgEngagement, 0);
+            
+            container.innerHTML = `
+                <div class="combo-card">
+                    <div class="combo-header">
+                        <div class="combo-title">系统推荐组合</div>
+                        <span class="combo-type">综合最优</span>
+                    </div>
+                    <div class="combo-kols">
+                        ${selected.map(k => `<div class="combo-kol">${k.avatar} ${k.name}</div>`).join('')}
+                    </div>
+                    <div class="combo-stats">
+                        <div class="combo-stat">
+                            <div class="combo-stat-value">¥${totalPrice.toLocaleString()}</div>
+                            <div class="combo-stat-label">总花费</div>
+                        </div>
+                        <div class="combo-stat">
+                            <div class="combo-stat-value">${formatNumber(totalViews)}</div>
+                            <div class="combo-stat-label">总曝光</div>
+                        </div>
+                        <div class="combo-stat">
+                            <div class="combo-stat-value">${formatNumber(totalEngagement)}</div>
+                            <div class="combo-stat-label">总互动</div>
+                        </div>
+                        <div class="combo-stat">
+                            <div class="combo-stat-value">¥${(totalPrice/totalViews*1000).toFixed(2)}</div>
+                            <div class="combo-stat-label">CPM</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ai-response mt-20">
+                    <div class="ai-header">AI组合建议</div>
+                    <div class="ai-content editable" contenteditable="true">
+                        ${result.replace(/\n/g, '<br>').replace(/^#{1,3}\s(.+)$/gm, '<h3>$1</h3>')}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('kol-combos').textContent = '4';
+        }
+        
+        // ====== Contact Messages ======
+        async function generateAllMessages() {
+            const selected = state.kolDatabase.filter(k => state.selectedKOLs.includes(k.id));
+            if (!selected.length) {
+                alert('请先选择KOL');
+                return;
+            }
+            
+            const container = document.getElementById('message-templates');
+            if (!container) return;
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            
+            // Call backend
+            let beMsg = {};
+            try {
+                const beRes = await fetch('/api/generate-messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        selected,
+                        brand: state.currentProject?.brief?.brand || '某品牌',
+                        product: state.currentProject?.brief?.product || '某产品',
+                    })
+                });
+                beMsg = await beRes.json();
+                if (beMsg.ok && beMsg.result.session_path) {
+                    state.currentProject.sessionPath = beMsg.result.session_path;
+                    saveProjects();
+                }
+            } catch (e) { console.error('backend msg error', e); }
+            
+            const prompt = `请为以下KOL生成个性化建联话术：
+品牌：${state.currentProject?.brief?.brand || '某品牌'}
+产品：${state.currentProject?.brief?.product || '某产品'}
+KOL列表：
+${selected.map(k => `- ${k.name}(${getPlatformName(k.platform)}, ${k.style}风格, ${k.bio})`).join('\n')}
+
+请为每种风格类型生成：
+1. 首次建联话术（开场白）
+2. 价格谈判话术
+3. 合作条款沟通话术
+4. 返点谈判技巧
+
+输出格式：
+### [风格类型] - [KOL名称]
+**开场白：**
+[话术内容]
+**价格谈判：**
+[话术内容]
+**谈判技巧：**
+[技巧要点]`;
+            
+            const result = await callMinimaxAI(prompt, '你是一位专业的KOL商务拓展专家，擅长根据不同KOL的风格和性格制定个性化沟通策略。');
+            
+            container.innerHTML = `
+                <div class="ai-response">
+                    <div class="ai-content editable" contenteditable="true">
+                        ${result.replace(/\n/g, '<br>').replace(/^#{1,3}\s(.+)$/gm, '<h3>$1</h3>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}
+                    </div>
+                </div>
+            `;
+            
+            // Show negotiation tips
+            const tipsContainer = document.getElementById('negotiation-tips');
+            if (tipsContainer) {
+                tipsContainer.innerHTML = `
+                    <div class="ai-response">
+                        <div class="ai-header">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                            谈判技巧要点
+                        </div>
+                        <div class="ai-content">
+                            <h3>💰 价格谈判</h3>
+                            <ul>
+                                <li>强调品牌调性与KOL形象的契合度</li>
+                                <li>提供额外曝光资源（如品牌账号转发）</li>
+                                <li>提出年度框架合作的可能性</li>
+                            </ul>
+                            <h3>🎁 争取额外权益</h3>
+                            <ul>
+                                <li>争取专属优惠码（便于追踪效果）</li>
+                                <li>要求额外图文置顶</li>
+                                <li>争取内容二次创作使用权</li>
+                            </ul>
+                            <h3>📈 返点策略</h3>
+                            <ul>
+                                <li>首次合作可争取5-10%返点</li>
+                                <li>量级返点：投放3个以上可争取10-15%</li>
+                                <li>年框返点：年度框架可达15-20%</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        async function generateContactMessage(id) {
+            const kol = state.kolDatabase.find(k => k.id === id);
+            const container = event.target.closest('.message-card');
+            
+            container.innerHTML += '<div class="loading"><div class="spinner"></div></div>';
+            
+            const prompt = `为以下KOL生成个性化建联话术：
+KOL：${kol.name}
+平台：${getPlatformName(kol.platform)}
+风格：${kol.style}
+简介：${kol.bio}
+品牌：${state.currentProject?.brief?.brand || '某品牌'}
+产品：${state.currentProject?.brief?.product || '某产品'}
+产品卖点：${state.currentProject?.brief?.features || '优质产品'}`;
+            
+            const result = await callMinimaxAI(prompt);
+            
+            container.innerHTML += `
+                <div class="message-tip">
+                    <strong>${kol.name} 专属话术：</strong><br>
+                    ${result.replace(/\n/g, '<br>')}
+                </div>
+            `;
+        }
+        
+        // ====== Content Generation ======
+        async function generateAllContent() {
+            const selected = state.kolDatabase.filter(k => state.selectedKOLs.includes(k.id));
+            if (!selected.length) {
+                alert('请先选择KOL');
+                return;
+            }
+            
+            const container = document.getElementById('content-suggestions');
+            if (!container) return;
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            
+            // Call backend
+            let beCreative = {};
+            try {
+                const beRes = await fetch('/api/generate-content', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        selected,
+                        brand: state.currentProject?.brief?.brand || '某品牌',
+                        product: state.currentProject?.brief?.product || '某产品',
+                        theme: state.currentProject?.brief?.theme || '',
+                    })
+                });
+                beCreative = await beRes.json();
+                if (beCreative.ok && beCreative.result.session_path) {
+                    state.currentProject.sessionPath = beCreative.result.session_path;
+                    saveProjects();
+                }
+            } catch (e) { console.error('backend creative error', e); }
+            
+            const prompt = `请为以下KOL生成投放内容创意：
+传播主题：${state.currentProject?.brief?.theme || state.currentProject?.brief?.analysis?.match(/主题[：:]\s*(.+)/)?.[1] || '待确定'}
+品牌：${state.currentProject?.brief?.brand || '某品牌'}
+产品：${state.currentProject?.brief?.product || '某产品'}
+KOL列表：
+${selected.map(k => `- ${k.name}(${getPlatformName(k.platform)}, ${k.style}, ${k.bio})`).join('\n')}
+
+请为每个KOL生成3个不同方向的内容创意，包括：
+1. 图文内容（文案脚本文案 + 视觉方向）
+2. 视频内容（剧本大纲 + 分镜建议）
+
+内容要求：
+- 契合KOL的${kol.style}风格
+- 适合${getPlatformName(kol.platform)}平台特性
+- 围绕传播主题，突出产品卖点
+- 提供多种创意方向供选择`;
+            
+            const result = await callMinimaxAI(prompt);
+            
+            container.innerHTML = selected.map(kol => `
+                <div class="content-card">
+                    <div class="content-preview">
+                        <span>${kol.avatar} ${kol.name}<br>内容创意预览</span>
+                    </div>
+<div class="content-body">
+                        <span class="content-type image">图文</span>
+                        <span class="content-type video">视频</span>
+                        <div class="content-title">${kol.name} - 内容方案</div>
+                        <div class="content-desc">点击生成详细内容创意...</div>
+                        <button class="btn btn-secondary btn-sm mt-20" onclick="generateKOLContent(${kol.id})" style="width:100%">
+                            生成内容创意
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function generateKOLContent(id) {
+            const kol = state.kolDatabase.find(k => k.id === id);
+            const container = event.target.closest('.content-card') || document.getElementById('content-suggestions');
+            
+            const card = Array.from(document.querySelectorAll('.content-card')).find(c => c.querySelector('.content-title').textContent.includes(kol.name));
+            if (card) {
+                card.querySelector('.content-desc').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            }
+            
+            const prompt = `为以下KOL生成个性化投放内容创意：
+KOL信息：
+- 名称：${kol.name}
+- 平台：${getPlatformName(kol.platform)}
+- 风格：${kol.style}
+- 简介：${kol.bio}
+- 标签：${kol.tags.join(', ')}
+品牌信息：
+- 品牌：${state.currentProject?.brief?.brand || '某品牌'}
+- 产品：${state.currentProject?.brief?.product || '某产品'}
+- 核心卖点：${state.currentProject?.brief?.features || '优质产品'}
+- 传播主题：${state.currentProject?.brief?.theme || '待确定'}
+
+请生成3个不同方向的内容创意方案，每个方案需包含：
+1. 图文内容（文案脚本文案 + 视觉参考描述）
+2. 视频内容（剧本大纲 + 分镜描述）
+
+要求：
+- 契合KOL的${kol.style}风格
+- 适合${getPlatformName(kol.platform)}平台特性
+- 围绕传播主题，突出产品卖点
+- 提供多元创意方向供选择`;
+            
+            const result = await callMinimaxAI(prompt);
+            
+            if (card) {
+                card.querySelector('.content-desc').innerHTML = `
+                    <div style="font-size:13px; line-height:1.8">
+                        ${result.replace(/\n/g, '<br>').replace(/^#{1,3}\s(.+)$/gm, '<h4 style="color:var(--primary);margin-top:10px">$1</h4>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}
+                    </div>
+                `;
+            }
+        }
+        
+        // ====== AI Call Helper ======
+        async function callMinimaxAI(prompt, systemPrompt = '你是一位有10年经验的专业市场营销顾问，擅长品牌传播策略、KOL营销和内容创意。请用专业且结构化的方式回答。') {
+            try {
+                const response = await fetch('/api/ai-proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, system_prompt: systemPrompt, temperature: 0.7 })
+                });
+                const data = await response.json();
+                if (!data.ok) {
+                    throw new Error(data.error || 'AI调用失败');
+                }
+                return data.content || '生成失败，请重试';
+            } catch (error) {
+                console.error('API Error:', error);
+                return 'API调用失败: ' + error.message;
+            }
+        }
+        
+        // ====== Helpers ======
+        function getPlatformName(platform) {
+            const names = { xiaohongshu: '小红书', bilibili: 'B站', douyin: '抖音', weibo: '微博' };
+            return names[platform] || platform;
+        }
+        
+        function formatNumber(num) {
+            if (num >= 10000) return (num / 10000).toFixed(1) + 'w';
+            return num.toLocaleString();
+        }
+        
+        // Initialize KOL database on load
+        setTimeout(initKOLDatabase, 100);
+    </script>
+
+    <!-- Session Feedback Panel -->
+    <div id="feedback-panel" style="position:fixed;bottom:20px;right:20px;width:320px;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:16px;display:none;z-index:9999;max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <strong>Session 反馈</strong>
+            <button onclick="toggleFeedback()" style="background:none;border:none;cursor:pointer;font-size:16px;">×</button>
+        </div>
+        <div id="feedback-session-info" style="font-size:12px;color:#666;margin-bottom:10px;"></div>
+        <select id="fb-severity" style="width:100%;margin-bottom:8px;padding:6px;border-radius:6px;border:1px solid #ddd;">
+            <option value="low">low</option>
+            <option value="medium" selected>medium</option>
+            <option value="high">high</option>
+            <option value="critical">critical</option>
+        </select>
+        <select id="fb-category" style="width:100%;margin-bottom:8px;padding:6px;border-radius:6px;border:1px solid #ddd;">
+            <option value="general">general</option>
+            <option value="ui">ui</option>
+            <option value="data">data</option>
+            <option value="logic">logic</option>
+            <option value="performance">performance</option>
+            <option value="llm">llm</option>
+            <option value="integration">integration</option>
+        </select>
+        <textarea id="fb-text" placeholder="反馈内容" style="width:100%;height:70px;margin-bottom:8px;padding:8px;border-radius:6px;border:1px solid #ddd;resize:none;"></textarea>
+        <button onclick="submitFeedback()" class="btn btn-primary btn-sm" style="width:100%;">提交反馈</button>
+        <div style="margin-top:12px;">
+            <button onclick="runReflector()" class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:6px;">生成迭代建议</button>
+            <button onclick="runReleaseGate()" class="btn btn-outline btn-sm" style="width:100%;">发布门禁建议</button>
+        </div>
+        <pre id="feedback-result" style="margin-top:10px;font-size:11px;background:#f5f5f5;padding:8px;border-radius:6px;max-height:150px;overflow:auto;"></pre>
+    </div>
+    <button id="feedback-toggle-btn" onclick="toggleFeedback()" style="position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;background:var(--primary);color:#fff;border:none;cursor:pointer;z-index:9998;box-shadow:0 2px 10px rgba(0,0,0,0.2);">💬</button>
+    
+    <script>
+        function toggleFeedback() {
+            const p = document.getElementById('feedback-panel');
+            const b = document.getElementById('feedback-toggle-btn');
+            if (p.style.display === 'none') {
+                p.style.display = 'block';
+                b.style.display = 'none';
+                updateFeedbackSessionInfo();
+            } else {
+                p.style.display = 'none';
+                b.style.display = 'block';
+            }
+        }
+        
+        function updateFeedbackSessionInfo() {
+            const sp = state.currentProject?.sessionPath || '';
+            document.getElementById('feedback-session-info').textContent = sp ? `Session: ${sp.split('/').pop()}` : '无关联 Session';
+        }
+        
+        async function submitFeedback() {
+            const sp = state.currentProject?.sessionPath || '';
+            if (!sp) { alert('当前项目无关联 Session，请先运行一次工作流。'); return; }
+            const res = await fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_path: sp,
+                    tester: '',
+                    feedback: document.getElementById('fb-text').value,
+                    severity: document.getElementById('fb-severity').value,
+                    category: document.getElementById('fb-category').value,
+                })
+            });
+            const data = await res.json();
+            document.getElementById('feedback-result').textContent = data.ok ? '反馈已提交 ✅' : JSON.stringify(data, null, 2);
+        }
+        
+        async function runReflector() {
+            document.getElementById('feedback-result').textContent = '分析中...';
+            const res = await fetch('/api/iteration-insights?days=30');
+            const data = await res.json();
+            document.getElementById('feedback-result').textContent = JSON.stringify(data, null, 2);
+        }
+        
+        async function runReleaseGate() {
+            document.getElementById('feedback-result').textContent = '计算中...';
+            const res = await fetch('/api/release-gate');
+            const data = await res.json();
+            document.getElementById('feedback-result').textContent = JSON.stringify(data, null, 2);
+        }
+    </script>
+
+</body>
+</html>

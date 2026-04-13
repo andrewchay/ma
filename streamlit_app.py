@@ -31,6 +31,19 @@ from agent_core.workflow.marketing_workflow import MarketingWorkflow
 from agent_core.workflow.marketing_workflow_v2 import MarketingWorkflowV2
 from agent_core.clarification.engine import ClarificationEngine
 from agent_core.eval.recorder import get_eval_recorder, EvalRecord
+from agent_core.orchestrator import MarketingFlowOrchestrator
+from agent_core.session_adapter import persist_workflow_session
+from agent_core.feedback_bridge import (
+    append_feedback,
+    list_feedback,
+    build_feedback_markdown,
+    export_feedback_reports,
+    generate_iteration_insights,
+    generate_release_gate_recommendation,
+    persist_iteration_insights,
+    persist_release_gate_report,
+    session_id_from_path,
+)
 
 # ============================================
 # 页面配置
@@ -146,7 +159,7 @@ st.markdown("""
 def render_sidebar():
     with st.sidebar:
         st.markdown("### 🧭 页面导航")
-        nav_options = ["首页", "工作流", "StrategyIQ", "MatchAI", "ConnectBot", "CreativePilot"]
+        nav_options = ["首页", "工作流", "对话工作流", "StrategyIQ", "MatchAI", "ConnectBot", "CreativePilot"]
         current = st.session_state.get("current_tab", "首页")
         if current in {"工作流工作台", "工作流V2"}:
             current = "工作流"
@@ -514,6 +527,153 @@ def render_feedback_section(module_name: str, record_id: Optional[str] = None):
             st.caption(f"🆔 记录ID：`{record_id}`")
             
             st.rerun()
+
+
+def render_session_feedback_panel(session_path: str, prefix: str = "sf") -> None:
+    """Render init_agent-integrated feedback panel for a persisted session."""
+    st.markdown("---")
+    st.markdown("### 🔄 Session 反馈与自迭代（init_agent）")
+
+    session_id = session_id_from_path(session_path)
+    st.caption(f"当前关联 Session: `{session_id}`")
+    st.code(session_path)
+
+    with st.form(f"{prefix}_feedback_form", border=True):
+        f1, f2, f3 = st.columns(3)
+        tester = f1.text_input("测试人", value="", key=f"{prefix}_tester")
+        severity = f2.selectbox(
+            "严重级别",
+            ["low", "medium", "high", "critical"],
+            index=1,
+            key=f"{prefix}_severity",
+        )
+        category = f3.selectbox(
+            "问题类别",
+            ["general", "ui", "data", "logic", "performance", "llm", "integration"],
+            index=0,
+            key=f"{prefix}_category",
+        )
+        version = st.text_input("版本标识（可选）", value="", key=f"{prefix}_version")
+        feedback_text = st.text_area(
+            "反馈内容",
+            height=100,
+            placeholder="描述观察到的问题或建议",
+            key=f"{prefix}_feedback_text",
+        )
+        steps = st.text_area("复现步骤（可选）", height=90, key=f"{prefix}_steps")
+        e1, e2 = st.columns(2)
+        expected_result = e1.text_area("期望结果（可选）", height=80, key=f"{prefix}_expected")
+        actual_result = e2.text_area("实际结果（可选）", height=80, key=f"{prefix}_actual")
+
+        submitted = st.form_submit_button("提交反馈", type="primary", use_container_width=True)
+
+    if submitted:
+        if not session_path:
+            st.error("提交失败：缺少 session_path，请先运行流程后再提交反馈。")
+        elif not feedback_text.strip():
+            st.error("提交失败：反馈内容不能为空。")
+        else:
+            saved = append_feedback(
+                session_path=session_path,
+                tester=tester,
+                feedback=feedback_text,
+                severity=severity,
+                category=category,
+                steps_to_reproduce=steps,
+                expected_result=expected_result,
+                actual_result=actual_result,
+                version=version,
+            )
+            st.success(f"反馈已记录：{saved.get('timestamp')} / session={saved.get('session_id')}")
+
+    records = list_feedback(session_path=session_path, limit=50)
+    if records:
+        st.markdown("#### 当前 Session 的反馈历史")
+        rows = []
+        for r in records:
+            rows.append(
+                {
+                    "时间": r.get("timestamp", ""),
+                    "测试人": r.get("tester", ""),
+                    "级别": r.get("severity", ""),
+                    "类别": r.get("category", ""),
+                    "版本": r.get("version", ""),
+                    "反馈": r.get("feedback", ""),
+                }
+            )
+        st.dataframe(rows, use_container_width=True)
+        cexp1, cexp2, cexp3 = st.columns(3)
+        cexp1.download_button(
+            "下载当前 Session 反馈(JSON)",
+            data=json.dumps(records, ensure_ascii=False, indent=2),
+            file_name=f"feedback_{session_id or 'unknown'}.json",
+            mime="application/json",
+            use_container_width=True,
+            key=f"{prefix}_dl_json",
+        )
+        cexp2.download_button(
+            "下载当前 Session 反馈(MD)",
+            data=build_feedback_markdown(records=records, session_id=session_id, session_path=session_path),
+            file_name=f"feedback_{session_id or 'unknown'}.md",
+            mime="text/markdown",
+            use_container_width=True,
+            key=f"{prefix}_dl_md",
+        )
+        if cexp3.button("导出到 output/ 目录", use_container_width=True, key=f"{prefix}_export_dir"):
+            exported = export_feedback_reports(session_path=session_path)
+            st.success(f"已导出: {exported.get('json_path')} | {exported.get('md_path')}")
+
+        st.markdown("#### 自迭代分析（TrajectoryReflector）")
+        ci1, ci2 = st.columns([1, 1])
+        if ci1.button("生成迭代建议", use_container_width=True, key=f"{prefix}_gen_iter"):
+            insights = generate_iteration_insights(days=30)
+            st.session_state[f"{prefix}_iteration_insights"] = insights
+        if ci2.button("导出迭代建议到 output/", use_container_width=True, key=f"{prefix}_exp_iter"):
+            payload = st.session_state.get(f"{prefix}_iteration_insights")
+            if not payload:
+                st.warning("请先生成迭代建议。")
+            else:
+                out_path = persist_iteration_insights(payload)
+                st.success(f"已导出: {out_path}")
+
+        insights = st.session_state.get(f"{prefix}_iteration_insights")
+        if insights:
+            if insights.get("ok"):
+                st.success(insights.get("message", "分析完成"))
+            else:
+                st.warning(insights.get("message", "分析失败"))
+            st.json(insights.get("analysis", {}), expanded=False)
+
+        st.markdown("#### 发布门禁建议（半自动，仅建议不执行）")
+        g1, g2 = st.columns([1, 1])
+        if g1.button("生成发布门禁建议", use_container_width=True, key=f"{prefix}_gen_gate"):
+            gate = generate_release_gate_recommendation(
+                min_feedback_score=7.0,
+                max_error_rate=0.1,
+                max_latency_ms=5000,
+                min_samples=20,
+            )
+            st.session_state[f"{prefix}_release_gate_reco"] = gate
+        if g2.button("导出门禁建议到 output/", use_container_width=True, key=f"{prefix}_exp_gate"):
+            payload = st.session_state.get(f"{prefix}_release_gate_reco")
+            if not payload:
+                st.warning("请先生成发布门禁建议。")
+            else:
+                out = persist_release_gate_report(payload)
+                st.success(f"已导出: {out}")
+
+        gate = st.session_state.get(f"{prefix}_release_gate_reco")
+        if gate:
+            reco = gate.get("recommendation", {})
+            decision = reco.get("decision", "unknown")
+            if decision in {"promote_candidate", "ready_for_canary"}:
+                st.success(f"建议：{decision}")
+            else:
+                st.warning(f"建议：{decision}")
+            st.caption(reco.get("reason", ""))
+            st.json(gate, expanded=False)
+    else:
+        st.info("当前 Session 暂无反馈记录。")
 
 
 # ============================================
@@ -1519,6 +1679,25 @@ def render_workflow():
                         mime="application/json",
                         use_container_width=True,
                     )
+                    
+                    # 持久化 session
+                    try:
+                        sid, spath = persist_workflow_session(
+                            workflow_name="MarketingWorkflow",
+                            input_data={"brief": workflow_brief},
+                            result=report,
+                            prompt_label="ma-workflow-v1",
+                        )
+                        st.session_state["workflow_v1_session_path"] = spath
+                        st.caption(f"🗂️ Session: `{sid}`")
+                    except Exception as se:
+                        st.caption(f"⚠️ session 持久化失败: {se}")
+                    
+                    # Session 反馈面板
+                    if st.session_state.get("workflow_v1_session_path"):
+                        render_session_feedback_panel(
+                            st.session_state["workflow_v1_session_path"], prefix="wf1"
+                        )
             
             except Exception as e:
                 progress_bar.empty()
@@ -1661,8 +1840,31 @@ def render_workflow_v2():
             strategy = report.get("strategy", {})
             for p in strategy.get("platform_strategy", [])[:3]:
                 st.write(f"• **{p['name']}** ({p['priority']}优先级) - {p['reasoning']}")
+            
+            # 持久化 session（仅执行一次）
+            if "workflow_v2_session_path" not in st.session_state:
+                try:
+                    sid, spath = persist_workflow_session(
+                        workflow_name="MarketingWorkflowV2",
+                        input_data={
+                            "brief": st.session_state.workflow_v2_brief,
+                            "clarifications": st.session_state.workflow_v2_clarifications,
+                        },
+                        result=report,
+                        prompt_label="ma-workflow-v2",
+                    )
+                    st.session_state["workflow_v2_session_path"] = spath
+                    st.caption(f"🗂️ Session: `{sid}`")
+                except Exception as se:
+                    st.caption(f"⚠️ session 持久化失败: {se}")
         
-        # 反馈按钮
+        # Session 反馈面板
+        if st.session_state.get("workflow_v2_session_path"):
+            render_session_feedback_panel(
+                st.session_state["workflow_v2_session_path"], prefix="wf2"
+            )
+        
+        # 反馈按钮（保留原有 EvalRecorder 反馈）
         st.divider()
         st.markdown("#### 💬 这个方案怎么样？")
         
@@ -2224,6 +2426,373 @@ def render_workflow_studio():
             mime="application/json",
             use_container_width=True,
         )
+        
+        # 持久化 session（仅执行一次）
+        if "workflow_v3_session_path" not in st.session_state:
+            try:
+                sid, spath = persist_workflow_session(
+                    workflow_name="MarketingWorkflowStudio",
+                    input_data={"brief": st.session_state.wf3_brief, "skills": st.session_state.wf3_skills},
+                    result=final_package,
+                    prompt_label="ma-workflow-studio",
+                )
+                st.session_state["workflow_v3_session_path"] = spath
+                st.caption(f"🗂️ Session: `{sid}`")
+            except Exception as se:
+                st.caption(f"⚠️ session 持久化失败: {se}")
+        
+        if st.session_state.get("workflow_v3_session_path"):
+            render_session_feedback_panel(
+                st.session_state["workflow_v3_session_path"], prefix="wf3"
+            )
+
+
+def _wf_chat_stream(text: str):
+    """Simple stream generator for chat-like output."""
+    for chunk in text.split(" "):
+        yield chunk + " "
+
+
+def _wf_chat_stage_name(idx: int) -> str:
+    names = ["Brief解析", "用户研究", "策略生成", "KOL组合", "建联话术", "创意Brief"]
+    if 0 <= idx < len(names):
+        return names[idx]
+    return "已完成"
+
+
+def _wf_chat_run_stage(stage: int) -> dict[str, Any]:
+    """Run one stage and return generated artifact + summary."""
+    brief = st.session_state.get("wf_chat_brief", "")
+    feedbacks = st.session_state.get("wf_chat_feedbacks", {})
+    parsed = st.session_state.get("wf_chat_parsed")
+    user_research = st.session_state.get("wf_chat_user_research")
+    strategy = st.session_state.get("wf_chat_strategy")
+    kol_combo = st.session_state.get("wf_chat_kol_combo")
+
+    if stage == 0:
+        parsed = parse_brief(brief)
+        st.session_state.wf_chat_parsed = parsed
+        return {
+            "artifact_key": "wf_chat_parsed",
+            "artifact": parsed,
+            "summary": f"已完成Brief解析：品牌={parsed.get('brand','未提及')}，行业={parsed.get('industry','未提及')}，目标={parsed.get('goal','未提及')}。",
+        }
+
+    if stage == 1:
+        parsed = parsed or parse_brief(brief)
+        st.session_state.wf_chat_parsed = parsed
+        draft = _wf3_build_user_research(parsed)
+        urls_text = st.session_state.get("wf_chat_research_urls", "")
+        notes = st.session_state.get("wf_chat_research_notes", "")
+        links = [u.strip() for u in urls_text.splitlines() if u.strip()]
+        draft["research_inputs"] = {
+            "external_links": links,
+            "user_notes": notes,
+            "chat_feedback": feedbacks.get(1, ""),
+        }
+        st.session_state.wf_chat_user_research = draft
+        return {
+            "artifact_key": "wf_chat_user_research",
+            "artifact": draft,
+            "summary": f"已生成用户研究草案（含{len(links)}个外部链接输入）。请确认后进入策略。",
+        }
+
+    if stage == 2:
+        parsed = parsed or parse_brief(brief)
+        user_research = user_research or _wf3_build_user_research(parsed)
+        payload = dict(parsed)
+        payload["skills"] = st.session_state.get("wf_chat_skills", ["agency-agents", "content-marketing"])
+        payload["user_research_confirmed"] = user_research
+        payload["additional_feedback"] = feedbacks.get(2, "")
+        strategy = generate_strategy(payload)
+        if isinstance(strategy, dict):
+            strategy["audience_research"] = {
+                "segments": [
+                    {
+                        "name": "核心消费人群",
+                        "profile": user_research.get("persona_profile", {}).get("target_audience", "未提及"),
+                        "habits": user_research.get("behavior_habits", []),
+                        "product_linked_lifestyles": user_research.get("scenario_insights", []),
+                        "core_tensions": user_research.get("emotional_insights", []),
+                    }
+                ],
+                "insights": user_research.get("scenario_insights", []),
+            }
+            if "market_strategy_framework" in strategy:
+                strategy["market_strategy_framework"]["user_research"] = user_research
+        st.session_state.wf_chat_strategy = strategy
+        return {
+            "artifact_key": "wf_chat_strategy",
+            "artifact": strategy,
+            "summary": "策略已生成。你可以继续反馈修改，或确认进入KOL组合。",
+        }
+
+    if stage == 3:
+        parsed = parsed or parse_brief(brief)
+        strategy = strategy or generate_strategy({"industry": parsed.get("industry", "通用"), "goal": parsed.get("goal", "品牌曝光"), "budget": parsed.get("budget", "中等")})
+        platforms = [p.get("name", "") for p in strategy.get("platform_strategy", []) if p.get("name")] if isinstance(strategy, dict) else []
+        if not platforms:
+            platforms = parsed.get("preferred_platforms", []) or ["小红书", "抖音"]
+        budget = parsed.get("budget_amount", 50)
+        try:
+            budget_num = float(budget)
+        except Exception:
+            budget_num = 50.0
+        kol_combo = generate_kol_combo_with_llm(
+            budget=budget_num,
+            platforms=platforms[:2],
+            category=parsed.get("industry", "通用"),
+            brand=parsed.get("brand", "品牌"),
+            product="产品",
+            goal=parsed.get("goal", "品牌曝光"),
+            skills=st.session_state.get("wf_chat_skills", []),
+        )
+        st.session_state.wf_chat_kol_combo = kol_combo
+        return {
+            "artifact_key": "wf_chat_kol_combo",
+            "artifact": kol_combo,
+            "summary": "KOL组合已生成。请检查推荐名单，确认后进入建联。",
+        }
+
+    if stage == 4:
+        parsed = parsed or parse_brief(brief)
+        kol_combo = kol_combo or {}
+        picked = st.session_state.get("wf_chat_selected_kols", [])
+        if not picked:
+            picked = (kol_combo.get("recommended_head", []) + kol_combo.get("recommended_waist", []))[:5]
+        msgs = []
+        style = "professional"
+        fb = (feedbacks.get(4, "") or "").lower()
+        if "casual" in fb or "轻松" in fb:
+            style = "casual"
+        for kol in picked:
+            msg = generate_outreach_with_llm(
+                kol_name=kol.get("name", "KOL"),
+                kol_profile=kol,
+                brand=parsed.get("brand", "品牌"),
+                brand_intro="品牌合作邀约",
+                product="产品",
+                platform=kol.get("platform", "小红书"),
+                style=style,
+                cooperation_type="内容合作",
+                budget_range="面议",
+                skills=st.session_state.get("wf_chat_skills", []),
+            )
+            msgs.append({"kol": kol.get("name", "KOL"), "platform": kol.get("platform", "小红书"), "message": msg})
+        st.session_state.wf_chat_outreach = msgs
+        return {
+            "artifact_key": "wf_chat_outreach",
+            "artifact": msgs,
+            "summary": f"建联话术已生成（{len(msgs)}条）。请确认后进入创意Brief。",
+        }
+
+    if stage == 5:
+        parsed = parsed or parse_brief(brief)
+        strategy = strategy or {}
+        platforms = [p.get("name", "") for p in strategy.get("platform_strategy", []) if p.get("name")] if isinstance(strategy, dict) else []
+        if not platforms:
+            platforms = parsed.get("preferred_platforms", []) or ["小红书"]
+        selected = st.session_state.get("wf_chat_selected_kols", [])
+        kol_profile = selected[0] if selected else {}
+        creative = {}
+        for p in platforms[:2]:
+            creative[p] = generate_creative_brief_with_llm(
+                brand=parsed.get("brand", "品牌"),
+                product="产品",
+                platform=p,
+                kol_style="真实分享",
+                key_messages=parsed.get("key_messages", []),
+                must_include=["产品展示", "使用体验"],
+                forbidden=["绝对化宣传", "虚假承诺"],
+                target_audience=parsed.get("target_audience", "目标受众"),
+                campaign_goal=parsed.get("goal", "品牌曝光"),
+                industry=parsed.get("industry", "通用"),
+                skills=st.session_state.get("wf_chat_skills", []),
+                kol_profile=kol_profile,
+            )
+        st.session_state.wf_chat_creative = creative
+        return {
+            "artifact_key": "wf_chat_creative",
+            "artifact": creative,
+            "summary": "创意Brief已完成。你可以下载完整执行包。",
+        }
+
+    return {"artifact_key": "", "artifact": {}, "summary": "流程已完成。"}
+
+
+def render_workflow_chat():
+    st.markdown("### 💬 对话工作流（Beta）")
+    st.caption("provider-agnostic 编排层（可切 Kimi/OpenAI/Claude/Minimax），每步可反馈重做。")
+
+    orch = MarketingFlowOrchestrator.from_dict(st.session_state.get("wf_chat_orch_state"))
+    stage = orch.state.stage
+    stage_names = ["Brief解析", "用户研究", "策略生成", "KOL组合", "建联话术", "创意Brief", "完成"]
+
+    st.progress(min(stage + 1, 6) / 6)
+    step_cols = st.columns(6)
+    for i, c in enumerate(step_cols):
+        state_icon = "✅" if i < stage else ("🟦" if i == stage else "⬜")
+        c.caption(f"{state_icon} {stage_names[i]}")
+
+    with st.container(border=True):
+        brief_input = st.text_area(
+            "Brief",
+            value=orch.state.brief,
+            height=90,
+            placeholder="例如：Nike世界杯主题活动，预算100万，Aero-Fit球服，偏好莱坞风格。",
+            key="wf_chat_brief_textarea",
+        )
+        cols = st.columns([1, 1, 2])
+        with cols[0]:
+            if st.button("📝 保存Brief", use_container_width=True, key="wf_chat_set_brief_btn"):
+                orch.set_brief(brief_input)
+                orch.append_assistant_message("Brief 已更新。")
+        with cols[1]:
+            if st.button("🎯 Nike示例", use_container_width=True, key="wf_chat_fill_sample_brief"):
+                orch.set_brief("Nike即将发布世界杯主题营销活动，整体预算100万，以世界杯国家队球服Aero-Fit系列产品为营销产品，要求传播内容风格偏好莱坞风格，可以演绎往届世界杯名场面作为内容。")
+                orch.append_assistant_message("已填充 Nike 示例 Brief。")
+        with cols[2]:
+            skills = st.multiselect(
+                "Skills（全流程）",
+                AVAILABLE_SKILLS,
+                default=orch.state.skills,
+                key="wf_chat_skills_selector",
+            )
+            orch.set_skills(skills)
+
+    left, right = st.columns([1.5, 1], vertical_alignment="top")
+    with left:
+        st.markdown(f"#### 当前步骤：{orch.stage_name()}")
+        if stage == 1:
+            with st.container(border=True):
+                urls_text = st.text_area(
+                    "参考网站（每行一个URL）",
+                    value="\n".join(orch.state.research_urls),
+                    key="wf_chat_research_urls_input",
+                    height=80,
+                )
+                notes = st.text_area(
+                    "补充调研要求",
+                    value=orch.state.research_notes,
+                    key="wf_chat_research_notes_input",
+                    height=70,
+                )
+                orch.set_research_inputs(urls_text, notes)
+
+        if stage == 3 and orch.state.kol_combo:
+            combo = orch.state.kol_combo
+            candidates = (combo.get("recommended_head", []) or []) + (combo.get("recommended_waist", []) or [])
+            names = []
+            for k in candidates:
+                n = k.get("name")
+                if n and n not in names:
+                    names.append(n)
+            selected_names = st.multiselect(
+                "确认进入建联的KOL",
+                options=names,
+                default=[k.get("name") for k in orch.state.selected_kols if k.get("name")] or names[:5],
+                key="wf_chat_selected_kol_names",
+            )
+            orch.set_selected_kols_by_names(selected_names)
+
+        art = orch.current_artifact()
+        with st.container(border=True):
+            if not art:
+                st.info("还没有当前步骤结果，点击右侧“生成当前步骤”。")
+            elif stage == 0:
+                st.metric("品牌", art.get("brand", "未提及"))
+                st.metric("行业", art.get("industry", "未提及"))
+                st.write(f"目标：{art.get('goal', '未提及')} | 预算：{art.get('budget_amount', '未提及')}万")
+            elif stage == 1:
+                p = art.get("persona_profile", {})
+                st.write(f"目标受众：{p.get('target_audience', '未提及')}")
+                inputs = art.get("research_inputs", {})
+                if inputs:
+                    st.write("调研关键词：")
+                    for q in inputs.get("queries", [])[:4]:
+                        st.write(f"- {q}")
+                    if inputs.get("external_links"):
+                        st.write("用户补充链接：")
+                        for u in inputs.get("external_links", [])[:5]:
+                            st.write(f"- {u}")
+                for x in art.get("scenario_insights", [])[:3]:
+                    st.write(f"- {x}")
+                if art.get("evidence_used"):
+                    st.write("证据来源：")
+                    for e in art.get("evidence_used", [])[:5]:
+                        st.write(f"- {e.get('source', '')}")
+            elif stage == 2:
+                for p in art.get("platform_strategy", [])[:3]:
+                    st.write(f"- {p.get('name','平台')}: {p.get('goal','')}")
+            elif stage == 3:
+                st.write(f"头部：{len(art.get('recommended_head', []))} | 腰部：{len(art.get('recommended_waist', []))}")
+            elif stage == 4:
+                st.write(f"建联话术数量：{len(art)}")
+            elif stage == 5:
+                st.write(f"创意平台：{', '.join(list(art.keys()))}")
+            with st.expander("查看当前步骤原始JSON"):
+                st.json(art)
+
+    with right:
+        with st.container(border=True):
+            fb = st.text_area(
+                "本步反馈/修改意见",
+                value=orch.state.feedbacks.get(stage, ""),
+                height=140,
+                key=f"wf_chat_feedback_editor_{stage}",
+                placeholder="例如：补充欧洲球迷分层；KOL不选泛生活方式账号。",
+            )
+            orch.set_feedback(stage, fb)
+            btn_cols = st.columns(3)
+            with btn_cols[0]:
+                if st.button("⚙️ 生成当前步骤", type="primary", use_container_width=True, key="wf_chat_run_stage"):
+                    if stage == 0 and not orch.state.brief:
+                        st.warning("请先输入 Brief。")
+                    else:
+                        out = orch.run_current_stage()
+                        orch.append_assistant_message(f"【{orch.stage_name()}】{out.get('summary', '')}")
+            with btn_cols[1]:
+                if st.button("✅ 确认并下一步", use_container_width=True, key="wf_chat_confirm_step"):
+                    orch.confirm_next()
+            with btn_cols[2]:
+                if st.button("🧹 重置", use_container_width=True, key="wf_chat_reset"):
+                    orch = MarketingFlowOrchestrator()
+
+    with st.expander("查看步骤记录", expanded=False):
+        for m in orch.state.messages[-12:]:
+            tag = "你" if m["role"] == "user" else "系统"
+            st.write(f"**{tag}**: {m['content']}")
+
+    if orch.state.creative:
+        final_text = json.dumps(orch.export_package(), ensure_ascii=False, indent=2)
+        st.download_button(
+            "📥 下载对话工作流执行包(JSON)",
+            data=final_text,
+            file_name=f"workflow_chat_package_{int(time.time())}.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+        
+        # 持久化 session（仅执行一次）
+        if "workflow_chat_session_path" not in st.session_state:
+            try:
+                sid, spath = persist_workflow_session(
+                    workflow_name="MarketingFlowChat",
+                    input_data={"brief": orch.state.brief, "skills": orch.state.skills},
+                    result=orch.export_package(),
+                    prompt_label="ma-workflow-chat",
+                )
+                st.session_state["workflow_chat_session_path"] = spath
+                st.caption(f"🗂️ Session: `{sid}`")
+            except Exception as se:
+                st.caption(f"⚠️ session 持久化失败: {se}")
+        
+        if st.session_state.get("workflow_chat_session_path"):
+            render_session_feedback_panel(
+                st.session_state["workflow_chat_session_path"], prefix="wf_chat"
+            )
+
+    st.session_state["wf_chat_orch_state"] = orch.to_dict()
 
 
 # ============================================
@@ -2243,6 +2812,7 @@ def main():
     tabs = {
         "首页": render_home,
         "工作流": render_workflow_studio,
+        "对话工作流": render_workflow_chat,
         "StrategyIQ": render_strategy_iq,
         "MatchAI": render_match_ai,
         "ConnectBot": render_connect_bot,

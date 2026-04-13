@@ -13,3 +13,9 @@ workflow_report_*.json
 # Large local case files (keep local, don't version)
 docs/Petphone1127.pdf
 docs/Mind social/*.key
+
+# Runtime data & auto-generated
+.agent/
+output/
+*.log
+
