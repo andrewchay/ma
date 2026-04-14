@@ -49,6 +49,18 @@ def run_industry_template(args: list[str]) -> int:
     return 0
 
 
+def _read_brief_from_arg(arg: str) -> str:
+    """如果参数是文件路径则读取内容，否则直接返回文本。"""
+    from pathlib import Path
+    path = Path(arg)
+    if path.is_file():
+        try:
+            return path.read_text(encoding="utf-8")
+        except Exception as e:
+            print(f"Warning: 无法读取文件 {arg}: {e}")
+    return arg
+
+
 def run_strategy_parse(args: list[str]) -> int:
     """Parse brief command (optionally auto-generate strategy)"""
     from agent_core.tools.strategy_iq import strategy_parse_executor, strategy_generate_executor
@@ -62,8 +74,13 @@ def run_strategy_parse(args: list[str]) -> int:
         brief_parts.append(arg)
 
     brief = " ".join(brief_parts) if brief_parts else ""
+    # 支持直接传入文件路径
+    if len(brief_parts) == 1:
+        brief = _read_brief_from_arg(brief_parts[0])
+
     if not brief:
-        print("Usage: ma strategy-parse <brief text> [--parse-only]")
+        print("Usage: ma strategy-parse <brief text or file path> [--parse-only]")
+        print("Example: ma strategy-parse brief.txt")
         return 1
     
     result = strategy_parse_executor(json.dumps({"brief": brief}))

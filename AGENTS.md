@@ -259,8 +259,35 @@ pip install anthropic
 
 修改各模块中的 `system_prompt` 变量即可自定义LLM行为。
 
+### Brief 解析字段变更规范
+
+为避免再次出现"前端有字段、后端解析器不返回"的脱节问题，任何 Brief 解析字段的增删改必须遵循以下流程：
+
+1. **更新数据模型**  
+   先修改 `agent_core/models/brief.py` 中的 `BriefParseResult`，它是前后端字段的**唯一数据源**。
+
+2. **更新解析逻辑**  
+   修改 `agent_core/tools/strategy_iq.py`：
+   - LLM prompt 的 JSON schema 通过 `BriefParseResult.get_prompt_schema_text()` 生成，不要手写
+   - 规则兜底解析 `_rule_based_parse` 构建完 dict 后，必须用 `BriefParseResult.model_validate(result).model_dump()` 返回，确保字段不缺
+
+3. **更新 Web API 映射**  
+   修改 `web_api.py` 的 `/api/analyze-brief`，确保新字段被显式映射到前端返回结构。
+
+4. **更新前端消费**  
+   修改 `web/index.html` 中的：
+   - `autoFillForm` — 把新字段映射到对应表单元素
+   - `showExtractedPreview` — 在提取信息预览中展示新字段
+
+5. **运行同步测试**  
+   必须执行并确保通过：
+   ```bash
+   python3 -m unittest tests.test_brief_schema_sync -v
+   ```
+   测试会检查：解析器返回完整性、后端 API 字段引用、前端字段消费三处是否一致。
+
 ---
 
-**文档版本**: 1.1.0  
-**更新日期**: 2026-04-04  
-**更新内容**: 接入LLM支持 (OpenAI/Claude/Kimi/Minimax)
+**文档版本**: 1.2.0  
+**更新日期**: 2026-04-15  
+**更新内容**: 接入LLM支持 (OpenAI/Claude/Kimi/Minimax)；增加 Brief 解析字段变更规范与同步测试

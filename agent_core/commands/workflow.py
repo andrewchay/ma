@@ -5,16 +5,31 @@ import json
 import time
 
 
+def _read_brief_from_arg(arg: str) -> str:
+    """如果参数是文件路径则读取内容，否则直接返回文本。"""
+    from pathlib import Path
+    path = Path(arg)
+    if path.is_file():
+        try:
+            return path.read_text(encoding="utf-8")
+        except Exception as e:
+            print(f"Warning: 无法读取文件 {arg}: {e}")
+    return arg
+
+
 def run_full_workflow(args: list[str]) -> int:
     """运行完整营销工作流"""
     from agent_core.workflow.marketing_workflow import MarketingWorkflow
     
     # 解析参数
-    brief = " ".join(args) if args else ""
+    joined = " ".join(args) if args else ""
+    # 支持直接传入文件路径
+    brief = _read_brief_from_arg(joined) if len(args) == 1 else joined
     
     if not brief:
-        print("Usage: ma workflow <brief text>")
+        print("Usage: ma workflow <brief text or file path>")
         print("Example: ma workflow \"美妆品牌花西子新品口红上市，预算100万，目标种草年轻女性\"")
+        print("Example: ma workflow brief.txt")
         return 1
     
     print("\n" + "=" * 60)

@@ -63,7 +63,7 @@ def run_help(_: list[str]) -> int:
 核心命令:
 
 📊 StrategyIQ - 策略生成
-  strategy-parse <brief>           解析brief并自动生成策略
+  strategy-parse <brief|file>      解析brief并自动生成策略
     可选: --parse-only             仅解析不生成策略
   strategy-generate [params]       生成策略
     params: industry=<行业> budget=<预算> goal=<目标> skills=<skill1,skill2>
@@ -93,8 +93,9 @@ def run_help(_: list[str]) -> int:
     params: content=<内容> brand=<品牌> platform=<平台>
 
 🔄 Workflow - 端到端工作流
-  workflow <brief>                 一键生成完整营销方案
+  workflow <brief|file>            一键生成完整营销方案
                                    例: ma workflow "美妆品牌新品上市预算100万"
+                                   例: ma workflow brief.txt
   workflow-i                       交互式工作流 (问答式)
 
 其他命令:

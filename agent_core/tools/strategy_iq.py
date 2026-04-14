@@ -6,276 +6,13 @@ from typing import Any
 
 from agent_core.case_playbook import derive_case_playbook
 from agent_core.industry_templates import get_industry_template, normalize_industry
+from agent_core.models import BriefParseResult
+from agent_core.research import research_for_strategy
 from agent_core.skills import resolve_skill_context
 
 
-def parse_brief(brief_text: str) -> dict[str, Any]:
-    """使用LLM解析客户brief，提取关键信息"""
-    from agent_core.llm import get_llm_client
-    
-    llm = get_llm_client()
-    
-    system_prompt = """你是一个专业的社交营销brief解析专家。请从用户输入中提取以下信息，并以JSON格式返回：
-{
-    "brand": "品牌名称",
-    "industry": "行业类别（美妆/3C/快消/母婴/时尚/食品等）",
-    "goal": "营销目标（品牌曝光/种草/转化/销售）",
-    "budget": "预算级别（高/中高/中等/低），根据金额判断：>100万=高，50-100万=中高，20-50万=中等，<20万=低",
-    "timeline": "执行周期",
-    "target_audience": "目标受众描述",
-    "key_messages": ["关键传播信息1", "关键传播信息2"],
-    "preferred_platforms": ["首选平台1", "首选平台2"],
-    "constraints": "特殊要求或限制"
-}
-
-如果某些信息未提及，使用"未提及"或合理推断。"""
-
-    prompt = f"请解析以下营销brief：\n\n{brief_text}\n\n请提取关键信息并以JSON格式返回。"
-    
-    try:
-        result = llm.complete(prompt, system_prompt=system_prompt, json_mode=True)
-        if isinstance(result, dict) and "error" not in result and not _is_weak_parse_result(result):
-            return result
-        # Fallback to rule-based parsing
-        return _rule_based_parse(brief_text)
-    except Exception as e:
-        return _rule_based_parse(brief_text)
-
-
-def _is_weak_parse_result(result: dict[str, Any]) -> bool:
-    """Detect low-quality parse outputs and trigger rule-based fallback."""
-    brand = str(result.get("brand", "") or "")
-    industry = str(result.get("industry", "") or "")
-    key_messages = result.get("key_messages", []) or []
-    preferred_platforms = result.get("preferred_platforms", []) or []
-
-    weak_brand = brand in {"", "未提及", "未知"}
-    weak_industry = industry in {"", "通用", "未提及", "未知"}
-    weak_detail = len(key_messages) == 0 and len(preferred_platforms) == 0
-    return weak_brand and weak_industry and weak_detail
-
-
-def _rule_based_parse(brief_text: str) -> dict[str, Any]:
-    """基于规则的备用解析"""
-    import re
-    
-    text_lower = brief_text.lower()
-    
-    # 品牌检测 - 先匹配已知品牌，再尝试提取
-    brand = "未提及"
-    lower_text = brief_text.lower()
-    
-    # 1. 特殊品牌识别（优先）
-    known_brands = {
-        'anker': 'Anker',
-        'nike': 'Nike',
-        '耐克': 'Nike',
-        '花西子': '花西子',
-        '完美日记': '完美日记',
-        '小米': '小米',
-        '华为': '华为',
-        '苹果': '苹果',
-        'iphone': 'iPhone',
-        'mac': 'Mac',
-        'dior': 'Dior',
-        'chanel': 'Chanel',
-    }
-    for kb_lower, kb_original in known_brands.items():
-        if kb_lower in lower_text:
-            brand = kb_original
-            break
-    
-    # 2. 如果已知品牌没匹配到，尝试从文本提取
-    if brand == "未提及":
-        # 匹配模式：句子开头的大写英文品牌
-        match = re.search(r'^([A-Z][a-zA-Z0-9]{1,10})\b', brief_text.strip())
-        if match:
-            potential = match.group(1)
-            # 排除常见词
-            common_words = ['The', 'This', 'That', 'There', 'These', 'Those', 'What', 'When', 'Where', 'Who', 'Why', 'How', 'I', 'We', 'You', 'They', 'Need', 'Want', 'Have', 'Do', 'Make', 'Create']
-            if potential not in common_words:
-                brand = potential
-    
-    # 3. 提取目标受众
-    audience = "未提及"
-    audience_patterns = [
-        r'针对(.+?)(?:用户|人群|消费者|受众|市场)',
-        r'目标(.+?)(?:用户|人群|消费者|受众)',
-        r'(.+?)(?:用户|人群)(?:群体|为主)',
-    ]
-    for pattern in audience_patterns:
-        match = re.search(pattern, brief_text)
-        if match:
-            audience = match.group(1).strip()[:10]  # 限制长度
-            break
-    
-    # 行业检测（采用加权匹配，避免"宠物科技"被"3C/科技"误识别）
-    industry = _detect_industry(brief_text)
-    
-    # Anker通常是3C/充电品牌
-    if brand.lower() == "anker":
-        industry = "3C"
-    
-    # 目标检测
-    goal = "品牌曝光"
-    if any(kw in text_lower for kw in ["种草", "转化", "购买"]):
-        goal = "种草转化"
-    elif any(kw in text_lower for kw in ["销售", "卖货", "成交", "gmv"]):
-        goal = "销售转化"
-    elif any(kw in text_lower for kw in ["曝光", "知名度", "声量", "品牌"]):
-        goal = "品牌曝光"
-    
-    # 预算检测
-    budget_match = re.search(r'(\d+)\s*万', brief_text)
-    if budget_match:
-        budget_num = int(budget_match.group(1))
-    else:
-        budget_num = None  # 未提及，不设置默认值
-    
-    if budget_num:
-        if budget_num >= 100:
-            budget = "高"
-        elif budget_num >= 50:
-            budget = "中高"
-        elif budget_num >= 20:
-            budget = "中等"
-        else:
-            budget = "低"
-    else:
-        budget = "未提及"
-        budget_num = "待商议"
-    
-    # 目标受众检测
-    audience = "未提及"
-    audience_patterns = [
-        r'针对(.+?)(?:用户|人群|消费者|受众)',
-        r'目标(.+?)(?:用户|人群|消费者|受众)',
-        r'(.+?)(?:用户|人群)群体',
-    ]
-    for pattern in audience_patterns:
-        match = re.search(pattern, brief_text)
-        if match:
-            audience = match.group(1).strip()
-            break
-    if audience == "未提及":
-        if any(k in brief_text for k in ["世界杯", "国家队", "球迷", "足球"]):
-            audience = "18-40岁足球/世界杯关注人群，偏运动潮流消费者"
-    
-    # 海外市场检测
-    overseas_markers = ["海外", "国外", "美国", "欧洲", "日本", "韩国", "东南亚", "全球", "跨境", "出海", "tiktok", "youtube", "instagram", "facebook", "twitter"]
-    is_overseas = any(marker in text_lower for marker in overseas_markers)
-    
-    # 传播关键信息抽取（轻量规则）
-    key_messages = []
-    if "Aero-Fit" in brief_text or "aero-fit" in text_lower:
-        key_messages.append("Aero-Fit系列产品卖点")
-    if "世界杯" in brief_text:
-        key_messages.append("世界杯主题传播")
-    if "国家队" in brief_text or "球服" in brief_text:
-        key_messages.append("国家队球服灵感演绎")
-    if "名场面" in brief_text:
-        key_messages.append("往届世界杯名场面再创作")
-
-    preferred_platforms = []
-    if any(k in brief_text for k in ["世界杯", "足球", "运动", "球服"]):
-        preferred_platforms = ["抖音", "B站", "小红书"]
-
-    constraints = []
-    if "好莱坞风格" in brief_text:
-        constraints.append("内容风格偏好莱坞叙事与视听质感")
-    if "名场面" in brief_text:
-        constraints.append("允许演绎往届世界杯名场面")
-    constraints_text = "；".join(constraints) if constraints else "未提及"
-
-    timeline = "未提及"
-    if "即将" in brief_text:
-        timeline = "建议在1-2个月内完成预热-爆发-长尾执行"
-
-    return {
-        "brand": brand,
-        "industry": normalize_industry(industry),
-        "goal": goal,
-        "budget": budget,
-        "budget_amount": budget_num,
-        "timeline": timeline,
-        "target_audience": audience,
-        "is_overseas": is_overseas,  # 添加海外市场标记
-        "key_messages": key_messages,
-        "preferred_platforms": preferred_platforms,
-        "constraints": constraints_text,
-    }
-
-
-def _detect_industry(brief_text: str) -> str:
-    """Detect industry with weighted keyword scoring."""
-    text = (brief_text or "").lower()
-
-    industry_keywords = {
-        "宠物科技": ["宠物", "狗", "猫", "pet", "tracker", "collar", "分离焦虑", "项圈"],
-        "运动鞋服": ["运动", "跑步", "篮球", "训练", "球鞋", "sneaker", "赛前", "赛事", "世界杯", "国家队", "球服", "足球", "aero-fit"],
-        "美妆": ["美妆", "护肤", "化妆品", "口红", "粉底", "眼影"],
-        "母婴": ["母婴", "婴儿", "宝宝", "孕妇", "育儿"],
-        "时尚": ["时尚", "服装", "穿搭", "潮流", "配饰"],
-        "快消": ["快消", "食品", "饮料", "日用品"],
-        "3C": ["数码", "手机", "电脑", "科技", "智能", "电子", "充电", "配件"],
-    }
-    priority = {
-        "宠物科技": 3.0,
-        "运动鞋服": 2.0,
-        "美妆": 1.5,
-        "母婴": 1.5,
-        "时尚": 1.2,
-        "快消": 1.0,
-        "3C": 0.8,  # 泛词较多，降低优先级
-    }
-
-    best = ("通用", 0.0)
-    for industry, keywords in industry_keywords.items():
-        hit_count = sum(1 for kw in keywords if kw in text)
-        score = hit_count * priority.get(industry, 1.0)
-        if score > best[1]:
-            best = (industry, score)
-
-    return best[0]
-
-
-def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
-    """使用LLM生成营销策略"""
-    from agent_core.llm import get_llm_client
-    
-    llm = get_llm_client()
-    
-    requested_skills = brief_data.get("skills", []) if isinstance(brief_data.get("skills", []), list) else []
-    skill_ctx = resolve_skill_context("strategy", brief_data, requested_skills=requested_skills)
-
-    system_prompt = """你是一个资深的社交营销策略专家。请基于提供的brief信息，生成一份专业的营销策略方案。
-
-【重要要求 - 基于用户反馈迭代】
-1. 必须包含具体的KOL推荐（头部和腰部都要有具体人选或类型描述）
-2. 平台策略要有详细的选择理由
-3. 预算分配要具体到数字
-4. 时间线要可执行
-5. 传播策略必须遵循研究先行顺序：
-   - 先做目标人群研究（产品相关生活习惯、行为洞察、情绪动机）
-   - 再做竞品传播角度分析（同质化产品如何讲）
-   - 最后结合产品功能利益点，提出差异化且有情绪价值的传播角度
-
-请确保策略包含：
-0. 市场策略分块框架（用户研究、竞品分析、产品特征、三定位发散）
-1. 目标人群研究（用户分层、生活习惯、产品关联场景、核心痛点）
-2. 竞品传播分析（竞品主角度、内容范式、可借鉴与可避坑点）
-3. 差异化传播角度（功能利益点包装 + 情绪价值主张 + 创意表达）
-4. 平台选择及理由（至少2-3个平台）
-5. KOL组合策略（必须包含：头部/腰部/KOC的配比、具体推荐名单、预算占比）
-6. 内容方向建议（核心主题、调性、hashtag策略）
-7. 预算分配建议（平台维度+KOL维度）
-8. KPI设定（主要、次要、第三层级）
-9. 执行时间线（筹备期、预热期、爆发期、长尾期）
-10. 执行指导（关键节点、风险提醒、成功要素）
-11. 参考案例打法映射（case_playbook）
-
-以JSON格式返回：
-{
+# LLM prompt JSON schema for generate_strategy
+_STRATEGY_JSON_SCHEMA = """{
     "market_strategy_framework": {
         "user_research": {
             "profile_dimensions": ["年龄", "性别", "收入", "城市层级", "社会关系"],
@@ -358,12 +95,358 @@ def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
     },
     "applied_skills": ["skill1", "skill2"],
     "key_insights": ["核心洞察1", "核心洞察2"]
-}""" + skill_ctx.get("skill_prompt_addon", "")
+}"""
+
+
+def parse_brief(brief_text: str) -> dict[str, Any]:
+    """使用LLM解析客户brief，提取关键信息"""
+    from agent_core.llm import get_llm_client
+
+    llm = get_llm_client()
+
+    system_prompt = f"""你是一个专业的社交营销brief解析专家。请从用户输入中提取以下信息，并以JSON格式返回：
+{_STRATEGY_JSON_SCHEMA}
+
+如果某些信息未提及，使用"未提及"或合理推断。
+注意：
+1. 如果文中提到"XX系列产品"，product 应该填写完整的系列名称
+2. goal 如果是借大型赛事/节日热度提升认知，请填写"产品认知"
+3. theme 请提取具体的热点事件或主题方向"""
+
+    prompt = f"请解析以下营销brief：\n\n{brief_text}\n\n请提取关键信息并以JSON格式返回。"
+    
+    try:
+        result = llm.complete(prompt, system_prompt=system_prompt, json_mode=True)
+        if isinstance(result, dict) and "error" not in result and not _is_weak_parse_result(result):
+            # 用模型做字段补齐和校验，确保后向兼容
+            return BriefParseResult.model_validate(result).model_dump()
+        # Fallback to rule-based parsing
+        return _rule_based_parse(brief_text)
+    except Exception as e:
+        return _rule_based_parse(brief_text)
+
+
+def _is_weak_parse_result(result: dict[str, Any]) -> bool:
+    """Detect low-quality parse outputs and trigger rule-based fallback."""
+    brand = str(result.get("brand", "") or "")
+    industry = str(result.get("industry", "") or "")
+    key_messages = result.get("key_messages", []) or []
+    preferred_platforms = result.get("preferred_platforms", []) or []
+
+    weak_brand = brand in {"", "未提及", "未知"}
+    weak_industry = industry in {"", "通用", "未提及", "未知"}
+    weak_detail = len(key_messages) == 0 and len(preferred_platforms) == 0
+    return weak_brand and weak_industry and weak_detail
+
+
+def _rule_based_parse(brief_text: str) -> dict[str, Any]:
+    """基于规则的备用解析"""
+    import re
+    
+    text_lower = brief_text.lower()
+    
+    # 品牌检测 - 先匹配已知品牌，再尝试提取
+    brand = "未提及"
+    lower_text = brief_text.lower()
+    
+    # 1. 特殊品牌识别（优先）
+    known_brands = {
+        'anker': 'Anker',
+        'nike': 'Nike',
+        '耐克': 'Nike',
+        '花西子': '花西子',
+        '完美日记': '完美日记',
+        '小米': '小米',
+        '华为': '华为',
+        '苹果': '苹果',
+        'iphone': 'iPhone',
+        'mac': 'Mac',
+        'dior': 'Dior',
+        'chanel': 'Chanel',
+    }
+    for kb_lower, kb_original in known_brands.items():
+        if kb_lower in lower_text:
+            brand = kb_original
+            break
+    
+    # 2. 如果已知品牌没匹配到，尝试从文本提取
+    if brand == "未提及":
+        # 匹配模式：句子开头的大写英文品牌
+        match = re.search(r'^([A-Z][a-zA-Z0-9]{1,10})\b', brief_text.strip())
+        if match:
+            potential = match.group(1)
+            # 排除常见词
+            common_words = ['The', 'This', 'That', 'There', 'These', 'Those', 'What', 'When', 'Where', 'Who', 'Why', 'How', 'I', 'We', 'You', 'They', 'Need', 'Want', 'Have', 'Do', 'Make', 'Create']
+            if potential not in common_words:
+                brand = potential
+    
+    # 3. 提取目标受众
+    audience = "未提及"
+    audience_patterns = [
+        r'针对(.+?)(?:用户|人群|消费者|受众|市场)',
+        r'目标(.+?)(?:用户|人群|消费者|受众)',
+        r'(.+?)(?:用户|人群)(?:群体|为主)',
+    ]
+    for pattern in audience_patterns:
+        match = re.search(pattern, brief_text)
+        if match:
+            audience = match.group(1).strip()[:10]  # 限制长度
+            break
+    
+    # 行业检测（采用加权匹配，避免"宠物科技"被"3C/科技"误识别）
+    industry = _detect_industry(brief_text)
+    
+    # Anker通常是3C/充电品牌
+    if brand.lower() == "anker":
+        industry = "3C"
+    
+    # 产品检测
+    product = "未提及"
+    if "aero-fit" in text_lower:
+        product = "Aero-Fit系列产品"
+    else:
+        product_patterns = [
+            r'(?:新品|新|推出|发布)(.+?)(?:上市|发布|上线|系列)',
+            r'(.+?)(?:系列|款产品)',
+        ]
+        for pattern in product_patterns:
+            match = re.search(pattern, brief_text)
+            if match:
+                potential = match.group(1).strip()
+                if len(potential) > 1 and len(potential) < 20:
+                    product = potential
+                    break
+    
+    # 目标检测
+    goal = "品牌曝光"
+    if any(kw in text_lower for kw in ["种草", "转化", "购买"]):
+        goal = "种草转化"
+    elif any(kw in text_lower for kw in ["销售", "卖货", "成交", "gmv"]):
+        goal = "销售转化"
+    elif any(kw in text_lower for kw in ["认知度", "产品认知", "了解", "知道"]):
+        goal = "产品认知"
+    elif any(kw in text_lower for kw in ["曝光", "知名度", "声量", "品牌"]):
+        goal = "品牌曝光"
+    
+    # 预算检测
+    budget_match = re.search(r'(\d+)\s*万', brief_text)
+    if budget_match:
+        budget_num = int(budget_match.group(1))
+    else:
+        budget_num = None  # 未提及，不设置默认值
+    
+    if budget_num:
+        if budget_num >= 100:
+            budget = "高"
+        elif budget_num >= 50:
+            budget = "中高"
+        elif budget_num >= 20:
+            budget = "中等"
+        else:
+            budget = "低"
+    else:
+        budget = "未提及"
+        budget_num = "待商议"
+    
+    # 目标受众检测
+    audience = "未提及"
+    audience_patterns = [
+        r'针对(.+?)(?:用户|人群|消费者|受众)',
+        r'目标(.+?)(?:用户|人群|消费者|受众)',
+        r'(.+?)(?:用户|人群)群体',
+    ]
+    for pattern in audience_patterns:
+        match = re.search(pattern, brief_text)
+        if match:
+            audience = match.group(1).strip()
+            break
+    if audience == "未提及":
+        if any(k in brief_text for k in ["世界杯", "国家队", "球迷", "足球"]):
+            audience = "18-40岁足球/世界杯关注人群，偏运动潮流消费者"
+    
+    # 海外市场检测
+    overseas_markers = ["海外", "国外", "美国", "欧洲", "日本", "韩国", "东南亚", "全球", "跨境", "出海", "tiktok", "youtube", "instagram", "facebook", "twitter"]
+    is_overseas = any(marker in text_lower for marker in overseas_markers)
+    
+    # 传播关键信息抽取（轻量规则）
+    key_messages = []
+    if "Aero-Fit" in brief_text or "aero-fit" in text_lower:
+        key_messages.append("Aero-Fit系列产品卖点")
+    if "世界杯" in brief_text:
+        key_messages.append("世界杯主题传播")
+    if "国家队" in brief_text or "球服" in brief_text:
+        key_messages.append("国家队球服灵感演绎")
+    if "名场面" in brief_text:
+        key_messages.append("往届世界杯名场面再创作")
+
+    preferred_platforms = []
+    if any(k in brief_text for k in ["世界杯", "足球", "运动", "球服"]):
+        preferred_platforms = ["抖音", "B站", "小红书"]
+
+    constraints = []
+    if "好莱坞风格" in brief_text:
+        constraints.append("内容风格偏好莱坞叙事与视听质感")
+    if "名场面" in brief_text:
+        constraints.append("允许演绎往届世界杯名场面")
+    constraints_text = "；".join(constraints) if constraints else "未提及"
+
+    timeline = "未提及"
+    if "即将" in brief_text:
+        timeline = "建议在1-2个月内完成预热-爆发-长尾执行"
+
+    # 主题/热点检测
+    theme = "未提及"
+    if "世界杯" in brief_text:
+        theme = "世界杯主题传播"
+    elif "春节" in brief_text or "年货" in brief_text:
+        theme = "春节营销"
+    elif "奥运" in brief_text:
+        theme = "奥运会主题传播"
+
+    return BriefParseResult.model_validate({
+        "brand": brand,
+        "product": product,
+        "industry": normalize_industry(industry),
+        "goal": goal,
+        "budget": budget,
+        "budget_amount": budget_num,
+        "timeline": timeline,
+        "target_audience": audience,
+        "is_overseas": is_overseas,
+        "key_messages": key_messages,
+        "theme": theme,
+        "preferred_platforms": preferred_platforms,
+        "constraints": constraints_text,
+    }).model_dump()
+
+
+def _detect_industry(brief_text: str) -> str:
+    """Detect industry with weighted keyword scoring."""
+    text = (brief_text or "").lower()
+
+    industry_keywords = {
+        "宠物科技": ["宠物", "狗", "猫", "pet", "tracker", "collar", "分离焦虑", "项圈"],
+        "运动鞋服": ["运动", "跑步", "篮球", "训练", "球鞋", "sneaker", "赛前", "赛事", "世界杯", "国家队", "球服", "足球", "aero-fit"],
+        "美妆": ["美妆", "护肤", "化妆品", "口红", "粉底", "眼影"],
+        "母婴": ["母婴", "婴儿", "宝宝", "孕妇", "育儿"],
+        "时尚": ["时尚", "服装", "穿搭", "潮流", "配饰"],
+        "快消": ["快消", "食品", "饮料", "日用品"],
+        "3C": ["数码", "手机", "电脑", "科技", "智能", "电子", "充电", "配件"],
+    }
+    priority = {
+        "宠物科技": 3.0,
+        "运动鞋服": 2.0,
+        "美妆": 1.5,
+        "母婴": 1.5,
+        "时尚": 1.2,
+        "快消": 1.0,
+        "3C": 0.8,  # 泛词较多，降低优先级
+    }
+
+    best = ("通用", 0.0)
+    for industry, keywords in industry_keywords.items():
+        hit_count = sum(1 for kw in keywords if kw in text)
+        score = hit_count * priority.get(industry, 1.0)
+        if score > best[1]:
+            best = (industry, score)
+
+    return best[0]
+
+
+def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
+    """使用LLM生成营销策略"""
+    from agent_core.llm import get_llm_client
+    
+    llm = get_llm_client()
+    
+    requested_skills = brief_data.get("skills", []) if isinstance(brief_data.get("skills", []), list) else []
+    skill_ctx = resolve_skill_context("strategy", brief_data, requested_skills=requested_skills)
+
+    # 执行真实调研
+    research_report = research_for_strategy(brief_data)
+    research_snippets = "\n\n".join(research_report.get("combined_snippets", []))
+    research_sources = research_report.get("sources", [])
+
+    _research_section = research_snippets if research_snippets else "（本次调研未获取到外部数据，请基于 brief 信息和你的专业知识生成策略。）"
+
+    system_prompt = (
+        f"你是一个资深的社交营销策略专家。请基于提供的brief信息和以下真实调研数据，生成一份专业的营销策略方案。\n\n"
+        f"【真实调研数据 - 必须引用并标注来源】\n"
+        f"以下是来自 Tavily 搜索引擎和 camoufox 浏览器抓取的最新调研摘要：\n\n"
+        f"{_research_section}\n\n"
+        "要求：\n"
+        "- 竞品分析中的具体品牌、传播角度、有效点必须优先基于调研数据\n"
+        "- 若调研提供了参考案例，请在 case_playbook.selected_cases 中明确列出品牌名\n"
+        "- 每个关键事实判断请尽量引用调研来源；若来源不足，明确标注为\"行业常识推断\"\n"
+        "- 在 key_insights 中至少列出 3 条基于调研或方法论推导出的核心洞察\n\n"
+        "【注入方法论框架 - 必须遵循】\n\n"
+        "1. 竞品分析框架 (competitive-analysis)\n"
+        "   - 不要只对比直接竞品的功能，必须识别\"竞争替代方案\"（包括现状、人工 workaround、传统解决方式）\n"
+        "   - 用 April Dunford 原则：先定义客户不买你的时候会做什么，再定位差异化空白\n"
+        "   - 竞品传播分析要具体：主角度、内容范式、有效点、风险点、可差异化空白\n\n"
+        "2. 内容营销框架 (content-marketing)\n"
+        '   - 内容必须是 "painkiller" 而非 "vitamin"：解决具体焦虑/痛点，而非提供泛泛信息\n'
+        "   - 追求 content-market fit：内容格式要匹配平台特性和创作者优势\n"
+        "   - 一致性优先：建立可持续的内容支柱（pillars），再追求爆款\n\n"
+        "3. 品牌叙事框架 (brand-storytelling)\n"
+        '   - 品牌要 "lead a movement"，不只是解决问题\n'
+        '   - 找到 "five-second moment"：用户认知/情绪转变的关键瞬间\n'
+        "   - 顾客是英雄（Luke），品牌是导师（Obi-Wan），产品是光剑\n"
+        "   - Hero Message 要一句话可复述，Creative Hook 要有情绪张力\n\n"
+        "4. 定价与价值感知 (pricing-strategy)\n"
+        '   - 若涉及产品定价/ tier 传播，价格锚点应在"竞争替代方案"和"感知价值"之间\n'
+        "   - 用 Good-Better-Best 思维设计内容层级：入门种草 → 深度转化 → 品牌忠诚\n\n"
+        "5. 结构化分析 (mckinsey-consultant)\n"
+        "   - 使用 MECE 原则拆解市场：用户分层不重叠、平台选择有互斥标准\n"
+        "   - 研究先行 → 假设驱动 → 证据支撑：每个策略建议都要有 brief 信息或逻辑推导作为依据\n"
+        "   - 在 key_insights 中明确列出 3-5 条核心洞察\n\n"
+        "6. 问题定义 (problem-definition)\n"
+        "   - 在动笔策略前，先在 market_strategy_framework 里清晰定义：\n"
+        "     * 这个问题是什么 / 不是什么\n"
+        "     * 客户真正在对抗的是什么（status quo）\n\n"
+        "7. 系统思维 (systems-thinking)\n"
+        "   - 识别二阶效应：平台选择如何影响 KOL 生态、内容如何反哺搜索指数、预算分配如何影响 ROI\n"
+        "   - 考虑多方利益相关者：品牌、KOL、平台算法、用户社交货币\n\n"
+        "8. 研究方法论 (research-anything)\n"
+        "   - 用 80/20 规则：聚焦 2-3 个最能产生洞察的方向深入，而非面面俱到\n"
+        "   - 每个事实性判断尽量 triangulate：有 brief 信息、行业常识、逻辑推导三者中至少两者支撑\n"
+        '   - 明确区分"已知事实"和"合理推断"\n\n'
+        "【重要要求 - 基于用户反馈迭代】\n"
+        "1. 必须包含具体的KOL推荐（头部和腰部都要有具体人选或类型描述）\n"
+        "2. 平台策略要有详细的选择理由\n"
+        "3. 预算分配要具体到数字\n"
+        "4. 时间线要可执行\n"
+        "5. 传播策略必须遵循研究先行顺序：\n"
+        "   - 先做目标人群研究（产品相关生活习惯、行为洞察、情绪动机）\n"
+        "   - 再做竞品传播角度分析（同质化产品如何讲）\n"
+        "   - 最后结合产品功能利益点，提出差异化且有情绪价值的传播角度\n\n"
+        "请确保策略包含：\n"
+        "0. 市场策略分块框架（用户研究、竞品分析、产品特征、三定位发散）\n"
+        "1. 目标人群研究（用户分层、生活习惯、产品关联场景、核心痛点）\n"
+        "2. 竞品传播分析（竞品主角度、内容范式、可借鉴与可避坑点）\n"
+        "3. 差异化传播角度（功能利益点包装 + 情绪价值主张 + 创意表达）\n"
+        "4. 平台选择及理由（至少2-3个平台）\n"
+        "5. KOL组合策略（必须包含：头部/腰部/KOC的配比、具体推荐名单、预算占比）\n"
+        "6. 内容方向建议（核心主题、调性、hashtag策略）\n"
+        "7. 预算分配建议（平台维度+KOL维度）\n"
+        "8. KPI设定（主要、次要、第三层级）\n"
+        "9. 执行时间线（筹备期、预热期、爆发期、长尾期）\n"
+        "10. 执行指导（关键节点、风险提醒、成功要素）\n"
+        "11. 参考案例打法映射（case_playbook）\n"
+        "12. applied_skills 字段必须列出本方案实际应用到的所有技能/方法论名称\n\n"
+        "以JSON格式返回：\n"
+        + _STRATEGY_JSON_SCHEMA
+        + "\n"
+        + skill_ctx.get("skill_prompt_addon", "")
+    )
 
     prompt = f"""请为以下品牌制定社交营销策略：
 
 品牌信息：
 {json.dumps(brief_data, ensure_ascii=False, indent=2)}
+
+调研来源：
+{json.dumps(research_sources, ensure_ascii=False, indent=2)}
 
 请生成完整的营销策略方案。"""
 
@@ -386,7 +469,17 @@ def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
             result.setdefault("audience_research", _build_audience_research(brief_data))
             result.setdefault("competitor_analysis", _build_competitor_analysis(brief_data))
             result.setdefault("communication_angle", _build_communication_angle(brief_data))
-            result.setdefault("applied_skills", skill_ctx.get("applied_skills", []))
+            # Merge applied skills from research + skill context
+            base_skills = set(skill_ctx.get("applied_skills", []))
+            research_skills = set(research_report.get("applied_skills", []))
+            result.setdefault("applied_skills", sorted(base_skills | research_skills))
+            # Attach research metadata for downstream transparency
+            result.setdefault("research_metadata", {
+                "queries_count": len(research_report.get("tavily_results", [])),
+                "sources": research_sources,
+                "errors": [r.get("error") for r in research_report.get("tavily_results", []) if r.get("error")]
+                        + [r.get("error") for r in research_report.get("camoufox_results", []) if r.get("error")],
+            })
             return result
         return _rule_based_strategy(brief_data)
     except Exception as e:
@@ -403,7 +496,11 @@ def _rule_based_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
     industry_template = get_industry_template(industry, is_overseas)
     requested_skills = brief_data.get("skills", []) if isinstance(brief_data.get("skills", []), list) else []
     skill_ctx = resolve_skill_context("strategy", brief_data, requested_skills=requested_skills)
-    
+
+    # 执行备用调研（规则分支也要尝试获取外部数据）
+    research_report = research_for_strategy(brief_data)
+    research_skills = set(research_report.get("applied_skills", []))
+
     # 平台推荐
     platform_strategy = _recommend_platforms(industry, goal, budget, is_overseas)
     if industry_template.get("platforms"):
@@ -457,7 +554,7 @@ def _rule_based_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
             "creative_must_include": industry_template.get("creative_must_include", []),
             "creative_forbidden": industry_template.get("creative_forbidden", []),
         },
-        "applied_skills": skill_ctx.get("applied_skills", []),
+        "applied_skills": sorted(set(skill_ctx.get("applied_skills", [])) | research_skills),
         "key_insights": [
             "基于规则生成的策略（已基于用户反馈迭代增强KOL推荐）",
             f"案例映射: {', '.join(case_playbook.get('selected_cases', [])) or '通用方法'}",

@@ -272,8 +272,8 @@
                         <div class="file-upload" id="file-upload-area">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                             <p>点击或拖拽文件上传</p>
-                            <p style="font-size:12px; color:#999">支持 Word、PDF、图片格式（PNG/JPG）</p>
-                            <input type="file" id="brief-file" accept=".doc,.docx,.pdf,.jpg,.jpeg,.png" onchange="handleFileUpload(this)">
+                            <p style="font-size:12px; color:#999">支持 Word、PDF、TXT、图片格式（PNG/JPG）</p>
+                            <input type="file" id="brief-file" accept=".doc,.docx,.pdf,.txt,.jpg,.jpeg,.png" onchange="handleFileUpload(this)">
                             <div id="file-name" class="file-name"></div>
                         </div>
                         
@@ -334,7 +334,9 @@
                                     <option value="5-10">5-10万</option>
                                     <option value="10-20">10-20万</option>
                                     <option value="20-50">20-50万</option>
-                                    <option value="50+">50万以上</option>
+                                    <option value="50-100">50-100万</option>
+                                    <option value="100-200">100-200万</option>
+                                    <option value="200+">200万以上</option>
                                 </select>
                             </div>
                         </div>
@@ -522,6 +524,11 @@
         document.addEventListener('DOMContentLoaded', () => {
             initNavigation();
             initKOLDatabase();
+            // 恢复最近一次的项目
+            if (state.projects.length > 0 && !state.currentProject) {
+                state.currentProject = state.projects[state.projects.length - 1];
+                state.selectedKOLs = state.currentProject?.selectedKOLs || [];
+            }
             renderProjectList();
             initDragDrop();
         });
@@ -633,6 +640,7 @@
             const isImage = fileType.startsWith('image/') || fileName.match(/\.(jpg|jpeg|png|gif|webp)$/);
             const isPDF = fileType === 'application/pdf' || fileName.endsWith('.pdf');
             const isWord = fileName.endsWith('.docx') || fileName.endsWith('.doc');
+            const isText = fileName.endsWith('.txt') || fileType === 'text/plain';
             
             // 显示文件名
             document.getElementById('file-name').textContent = `已选择: ${file.name}`;
@@ -653,13 +661,35 @@
                 }
                 
                 // 调用AI直接解析文件
-                const briefInfo = await analyzeBriefWithAIFromFile(file, fileName, isImage, isPDF, isWord);
+                const briefInfo = await analyzeBriefWithAIFromFile(file, fileName, isImage, isPDF, isWord, isText);
                 
                 // 自动填充表单
                 autoFillForm(briefInfo);
                 
                 // 显示提取的信息预览
                 showExtractedPreview(briefInfo);
+
+                // 保存 session 用于后续反馈
+                if (briefInfo.session_path) {
+                    if (!state.currentProject) {
+                        // 自动创建一个默认项目，避免弹窗打断
+                        const project = {
+                            id: Date.now(),
+                            name: file.name + ' 解析',
+                            createdAt: new Date().toISOString(),
+                            brief: {},
+                            selectedKOLs: [],
+                            status: 'draft'
+                        };
+                        state.projects.push(project);
+                        state.currentProject = project;
+                        saveProjects();
+                        renderProjectList();
+                    }
+                    state.currentProject.sessionPath = briefInfo.session_path;
+                    saveProjects();
+                    updateFeedbackSessionInfo();
+                }
                 
                 updateParsingStatus('success', '✅ Brief文件解析完成！请检查表单中的信息是否正确');
                 
@@ -670,7 +700,7 @@
         }
         
         // ====== AI直接解析文件（图片/PDF/Word/文本） ======
-        async function analyzeBriefWithAIFromFile(file, fileName, isImage, isPDF, isWord) {
+        async function analyzeBriefWithAIFromFile(file, fileName, isImage, isPDF, isWord, isText) {
             updateParsingStatus('info', '⏳ 正在AI分析Brief内容...');
             
             try {
@@ -687,7 +717,7 @@
     "product": "产品名称", 
     "features": "产品核心卖点",
     "goal": "传播目的 (brand/sales/awareness/repurchase)",
-    "budget": "预算范围 (5-10/10-20/20-50/50+)",
+    "budget": "预算范围 (5-10/10-20/20-50/50-100/100-200/200+)",
     "cpm": "目标CPM数值",
     "cpe": "目标CPE数值",
     "theme": "已有主题方向"
@@ -770,7 +800,15 @@
                     document.getElementById('extracted-text-container').classList.remove('hidden');
                     return await analyzeBriefWithAI(extractedText, fileName);
                 }
-                
+
+                // TXT文本文件
+                if (isText) {
+                    const extractedText = await extractTextFromText(file);
+                    document.getElementById('extracted-text').textContent = extractedText;
+                    document.getElementById('extracted-text-container').classList.remove('hidden');
+                    return await analyzeBriefWithAI(extractedText, fileName);
+                }
+
                 // 其他文本文件
                 const extractedText = await extractTextFromText(file);
                 document.getElementById('extracted-text').textContent = extractedText;
@@ -1000,10 +1038,111 @@
         }
         
         function getBudgetText(budget) {
-            const budgets = { '5-10': '5-10万', '10-20': '10-20万', '20-50': '20-50万', '50+': '50万以上' };
+            const budgets = { '5-10': '5-10万', '10-20': '10-20万', '20-50': '20-50万', '50-100': '50-100万', '100-200': '100-200万', '200+': '200万以上' };
             return budgets[budget] || budget;
         }
         
+        function _renderListItems(arr) {
+            if (!Array.isArray(arr) || arr.length === 0) return '';
+            return '<ul style="margin-left:18px;margin-top:4px;">' + arr.map(x => `<li style="margin:2px 0;">${x}</li>`).join('') + '</ul>';
+        }
+
+        function _renderKolList(kols) {
+            if (!Array.isArray(kols) || kols.length === 0) return '<p style="color:#999;font-size:12px;">暂无具体推荐</p>';
+            return kols.map(k => `
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #eee;font-size:13px;">
+                    <span style="font-weight:500;">${k.name || '未知'}</span>
+                    <span style="color:#666;">${k.platform || ''}</span>
+                    <span style="color:#666;">${k.followers || ''}</span>
+                    <span style="color:var(--warning);">${k.estimated_price || ''}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderAnalysisResult(data) {
+            const markdown = data.markdown || '';
+            const strategy = data.strategy || {};
+            const report = data.report || {};
+            const sessionPath = data.session_path || '';
+
+            const framework = strategy.market_strategy_framework || {};
+            const comp = strategy.competitor_analysis || {};
+            const angle = strategy.communication_angle || {};
+            const ks = strategy.kol_strategy || {};
+            const cs = strategy.content_strategy || {};
+            const cp = strategy.case_playbook || {};
+            const skills = strategy.applied_skills || [];
+            const keyInsights = strategy.key_insights || [];
+
+            const htmlMarkdown = markdown.replace(/\n/g, '<br>').replace(/^#{1,3}\s(.+)$/gm, '<h3 style="color:var(--primary);margin:10px 0 6px;">$1</h3>');
+
+            const researchMeta = strategy.research_metadata || {};
+            const researchSources = researchMeta.sources || [];
+            const researchErrors = researchMeta.errors || [];
+            const researchBlock = (researchSources.length || researchErrors.length)
+                ? `<div style="margin-top:10px;background:rgba(68,114,196,0.06);padding:10px;border-radius:6px;">
+                     <strong>📡 真实调研数据</strong>
+                     ${researchSources.length ? `<div style="font-size:12px;margin-top:4px;">来源: ${researchSources.map(s => `<span class="tag tag-success">${s.source || 'web'}</span>`).join('')}</div>` : ''}
+                     ${researchErrors.length ? `<div style="font-size:12px;color:var(--warning);margin-top:4px;">限制: ${researchErrors.slice(0,2).join('; ')}</div>` : ''}
+                   </div>`
+                : '';
+
+            const skillsBlock = skills.length
+                ? `<div style="margin-top:10px;"><strong>已应用方法论 / Skills:</strong> ${skills.map(s => `<span class="tag tag-primary">${s}</span>`).join('')}</div>`
+                : '';
+
+            const insightsBlock = keyInsights.length
+                ? `<div style="margin-top:10px;background:rgba(84,130,53,0.08);padding:10px;border-radius:6px;"><strong>核心洞察</strong>${_renderListItems(keyInsights)}</div>`
+                : '';
+
+            const frameworkBlock = framework.triple_positioning_options
+                ? `<div style="margin-top:8px;"><strong>三定位方向</strong>${_renderListItems(framework.triple_positioning_options.map(t => `${t.name}: ${t.logic} (风险: ${t.risk})`))}</div>`
+                : '';
+
+            const peerBlock = (comp.peer_brands || []).length
+                ? `<div style="margin-top:8px;"><strong>竞品分析</strong>${_renderListItems(comp.peer_brands.map(p => `<b>${p.name}</b>: ${p.angles?.join(', ')}; 有效点: ${p.what_works?.join(', ')}`))}</div>`
+                : '';
+
+            const kolBlock = (ks.head_kol || ks.waist_kol)
+                ? `<div style="margin-top:8px;"><strong>KOL具体推荐</strong>
+                    <div style="margin-top:6px;font-size:13px;"><b>头部</b>${_renderKolList(ks.head_kol?.recommended_kols)}</div>
+                    <div style="margin-top:6px;font-size:13px;"><b>腰部</b>${_renderKolList(ks.waist_kol?.recommended_kols)}</div>
+                   </div>`
+                : '';
+
+            const caseBlock = (cp.selected_cases || []).length
+                ? `<div style="margin-top:8px;"><strong>参考案例</strong>${_renderListItems(cp.selected_cases)}</div>`
+                : '';
+
+            return `
+                <div class="ai-response">
+                    <div class="ai-header">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        AI传播方案
+                    </div>
+                    <div class="ai-content editable" contenteditable="true" id="editable-analysis">
+                        ${htmlMarkdown}
+                    </div>
+                    ${researchBlock}
+                    ${skillsBlock}
+                    ${insightsBlock}
+                    <div style="margin-top:15px;border-top:1px solid var(--border);padding-top:10px;">
+                        <div style="font-size:13px;font-weight:500;color:var(--primary);margin-bottom:8px;">📋 结构化详情</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div style="background:#f8f9fa;padding:10px;border-radius:8px;">${frameworkBlock || '<p style="color:#999;font-size:12px;">无框架数据</p>'}</div>
+                            <div style="background:#f8f9fa;padding:10px;border-radius:8px;">${peerBlock || '<p style="color:#999;font-size:12px;">无竞品数据</p>'}</div>
+                            <div style="background:#f8f9fa;padding:10px;border-radius:8px;">${kolBlock || '<p style="color:#999;font-size:12px;">无KOL数据</p>'}</div>
+                            <div style="background:#f8f9fa;padding:10px;border-radius:8px;">${caseBlock || '<p style="color:#999;font-size:12px;">无案例数据</p>'}</div>
+                        </div>
+                    </div>
+                    <div class="mt-20 text-right">
+                        <button class="btn btn-outline btn-sm" onclick="saveAnalysis()">保存方案</button>
+                    </div>
+                </div>
+                ${sessionPath ? `<div style="margin-top:10px;font-size:12px;color:#666;">Session: ${sessionPath}</div>` : ''}
+            `;
+        }
+
         // ====== Brief Analysis ======
         async function generateBriefAnalysis() {
             const brand = document.getElementById('brand-name').value;
@@ -1023,27 +1162,6 @@
             const resultDiv = document.getElementById('brief-analysis-result');
             resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
             
-            const prompt = `请基于以下Brief信息，生成完整的传播方案：
-【品牌信息】
-- 品牌：${brand}
-- 产品：${product}
-- 核心卖点：${features || '待补充'}
-【需求信息】
-- 传播目的：${goal || '待确定'}
-- 预算范围：${budget || '待确定'}
-- 目标CPM：${cpm || '待确定'}元
-- 目标CPE：${cpe || '待确定'}元
-- 已有主题：${theme || '无，客户未指定'}
-
-请输出以下内容：
-1. 用户研究（核心用户画像：年龄、兴趣、消费习惯等）
-2. 竞品分析（至少3个竞品，简要分析其传播策略）
-3. 传播策略建议（包括主题方向）
-4. 创意内容方向建议（3-5个方向）
-5. 推荐平台优先级
-
-请使用清晰的Markdown格式输出。`;
-            
             try {
                 const response = await fetch('/api/generate-analysis', {
                     method: 'POST',
@@ -1054,30 +1172,14 @@
                 if (!data.ok) {
                     throw new Error(data.error || '生成失败');
                 }
-                const result = data.result.markdown || '生成失败，请重试';
-                const sessionPath = data.result.session_path || '';
                 
-                resultDiv.innerHTML = `
-                    <div class="ai-response">
-                        <div class="ai-header">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                            AI传播方案
-                        </div>
-                        <div class="ai-content editable" contenteditable="true" id="editable-analysis">
-                            ${result.replace(/\n/g, '<br>').replace(/^#{1,3}\s(.+)$/gm, '<h3>$1</h3>')}
-                        </div>
-                        <div class="mt-20 text-right">
-                            <button class="btn btn-outline btn-sm" onclick="saveAnalysis()">保存方案</button>
-                        </div>
-                    </div>
-                    ${sessionPath ? `<div style="margin-top:10px;font-size:12px;color:#666;">Session: ${sessionPath}</div>` : ''}
-                `;
+                resultDiv.innerHTML = renderAnalysisResult(data.result);
                 
                 // 保存到项目
                 if (state.currentProject) {
-                    state.currentProject.brief = { brand, product, features, goal, budget, cpm, cpe, theme, analysis: result };
+                    state.currentProject.brief = { brand, product, features, goal, budget, cpm, cpe, theme, analysis: data.result.markdown || '' };
                     state.currentProject.status = 'active';
-                    state.currentProject.sessionPath = sessionPath;
+                    state.currentProject.sessionPath = data.result.session_path || '';
                     saveProjects();
                     renderProjectList();
                 }
@@ -1694,7 +1796,17 @@ KOL信息：
         }
         
         async function submitFeedback() {
-            const sp = state.currentProject?.sessionPath || '';
+            let sp = state.currentProject?.sessionPath || '';
+            // fallback: 在所有项目中找最近一个有 sessionPath 的项目
+            if (!sp && state.projects.length > 0) {
+                for (let i = state.projects.length - 1; i >= 0; i--) {
+                    if (state.projects[i].sessionPath) {
+                        sp = state.projects[i].sessionPath;
+                        state.currentProject = state.projects[i];
+                        break;
+                    }
+                }
+            }
             if (!sp) { alert('当前项目无关联 Session，请先运行一次工作流。'); return; }
             const res = await fetch('/api/feedback', {
                 method: 'POST',

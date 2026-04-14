@@ -28,6 +28,7 @@ from agent_core.tools.connect_bot import (
     generate_negotiation_strategy_with_llm,
 )
 from agent_core.tools.creative_pilot import generate_creative_brief_with_llm
+from agent_core.workflow.marketing_workflow import MarketingWorkflow
 from agent_core.session_adapter import persist_workflow_session
 from agent_core.feedback_bridge import (
     append_feedback,
@@ -111,8 +112,8 @@ def _extract_json_from_text(text: str) -> dict:
 
 
 def _run_strategy_flow(brief_data: dict) -> dict:
-    """Run StrategyIQ and return structured result."""
-    parsed = parse_brief(
+    """Run full MarketingWorkflow and return structured result."""
+    brief_text = (
         f"品牌：{brief_data.get('brand', '')}\n"
         f"产品：{brief_data.get('product', '')}\n"
         f"卖点：{brief_data.get('features', '')}\n"
@@ -122,36 +123,156 @@ def _run_strategy_flow(brief_data: dict) -> dict:
         f"CPE：{brief_data.get('cpe', '')}\n"
         f"主题：{brief_data.get('theme', '')}\n"
     )
-    strategy = generate_strategy(parsed)
+
+    workflow = MarketingWorkflow()
+    context = workflow.run(brief_text)
+
+    brief_output = context.get_stage_output("brief_parse")
+    strategy_output = context.get_stage_output("strategy_generate")
+    kol_output = context.get_stage_output("kol_match")
+    outreach_output = context.get_stage_output("outreach_prepare")
+    creative_output = context.get_stage_output("creative_brief")
+    report_output = context.get_stage_output("report_generate")
+
+    parsed = brief_output.get("parsed_brief", {}) if brief_output else {}
+    strategy = strategy_output.get("strategy", {}) if strategy_output else {}
+    report = report_output.get("report", {}) if report_output else {}
+
     return {
         "parsed": parsed,
         "strategy": strategy,
-        "markdown": _strategy_to_markdown(parsed, strategy),
+        "report": report,
+        "kol": kol_output or {},
+        "outreach": outreach_output or {},
+        "creative": creative_output or {},
+        "markdown": _strategy_to_markdown(parsed, strategy, report),
+        "workflow_completed": context.completed_stages,
+        "workflow_failed": context.failed_stages,
     }
 
 
-def _strategy_to_markdown(parsed: dict, strategy: dict) -> str:
+def _strategy_to_markdown(parsed: dict, strategy: dict, report: dict | None = None) -> str:
     lines = ["# AI传播方案", ""]
-    lines.append("## 1. 用户研究")
+
+    # 0. 调研透明度
+    research = strategy.get("research_metadata", {})
+    sources = research.get("sources", [])
+    errors = research.get("errors", [])
+    if sources or errors:
+        lines.append("## 0. 调研来源")
+        if sources:
+            lines.append("**外部数据来源**:")
+            for s in sources[:8]:
+                lines.append(f"- [{s.get('source', 'web')}] {s.get('title', '')}")
+        if errors:
+            lines.append("**调研限制**:")
+            for e in errors[:3]:
+                lines.append(f"- ⚠️ {e}")
+        lines.append("")
+
+    # 1. 项目信息
+    lines.append("## 1. 项目信息")
+    lines.append(f"- **品牌**: {parsed.get('brand', '待补充')}")
+    lines.append(f"- **产品**: {parsed.get('product', '待补充')}")
     lines.append(f"- **目标受众**: {parsed.get('target_audience', '待补充')}")
-    lines.append(f"- **品牌**: {parsed.get('brand', '')}")
-    lines.append(f"- **产品**: {parsed.get('product', '')}")
+    lines.append(f"- **营销目标**: {parsed.get('goal', '待补充')}")
     lines.append("")
-    lines.append("## 2. 竞品分析")
-    lines.append("建议分析主要竞品在相同平台的投放策略与内容形式。")
-    lines.append("")
-    lines.append("## 3. 传播策略建议")
+
+    # 2. 市场策略框架
+    framework = strategy.get("market_strategy_framework", {})
+    if framework:
+        lines.append("## 2. 市场策略框架")
+        ur = framework.get("user_research", {})
+        if ur.get("scenario_insights"):
+            lines.append("**用户洞察**")
+            for s in ur["scenario_insights"][:2]:
+                lines.append(f"- {s}")
+        ca = framework.get("competitor_analysis", {})
+        if ca.get("opportunity_gaps"):
+            lines.append("**差异化空白**")
+            for g in ca["opportunity_gaps"][:2]:
+                lines.append(f"- {g}")
+        tpo = framework.get("triple_positioning_options", [])
+        if tpo:
+            lines.append("**三定位方向**")
+            for t in tpo[:3]:
+                lines.append(f"- {t.get('name', '')}: {t.get('logic', '')}")
+        lines.append("")
+
+    # 3. 竞品传播分析
+    comp = strategy.get("competitor_analysis", {})
+    if comp:
+        lines.append("## 3. 竞品传播分析")
+        peers = comp.get("peer_brands", [])
+        for peer in peers[:3]:
+            lines.append(f"- **{peer.get('name', '竞品')}**: 角度: {', '.join(peer.get('angles', []))}; 有效点: {', '.join(peer.get('what_works', []))}")
+        ws = comp.get("white_space", [])
+        if ws:
+            lines.append("**可占领空白**")
+            for w in ws[:3]:
+                lines.append(f"- {w}")
+        lines.append("")
+
+    # 4. 传播角度
+    angle = strategy.get("communication_angle", {})
+    if angle:
+        lines.append("## 4. 传播主角度")
+        lines.append(f"- **Hero Message**: {angle.get('hero_message', '')}")
+        lines.append(f"- **Creative Hook**: {angle.get('creative_hook', '')}")
+        lines.append("")
+
+    # 5. 平台策略
     ps = strategy.get("platform_strategy", [])
+    lines.append("## 5. 平台策略")
     for p in ps[:3]:
-        lines.append(f"- **{p.get('name', '平台')}**: {p.get('goal', '')}（{p.get('priority', '中')}优先级）")
+        lines.append(f"- **{p.get('name', '平台')}**: {p.get('goal', '')}（{p.get('priority', '中')}优先级）— {p.get('reasoning', '')}")
     lines.append("")
-    lines.append("## 4. 创意内容方向")
-    lines.append("1. 真实体验分享向")
-    lines.append("2. 专业测评科普向")
-    lines.append("3. 场景化种草向")
-    lines.append("")
-    lines.append("## 5. 推荐平台优先级")
-    lines.append(", ".join([p.get("name", "") for p in ps if p.get("name")]) or "小红书、抖音")
+
+    # 6. KOL策略
+    ks = strategy.get("kol_strategy", {})
+    if ks:
+        lines.append("## 6. KOL组合策略")
+        head = ks.get("head_kol", {})
+        waist = ks.get("waist_kol", {})
+        koc = ks.get("koc", {})
+        lines.append(f"- 头部: {head.get('count', '0')} ({head.get('purpose', '')}) 预算占比 {int(head.get('budget_ratio', 0)*100)}%")
+        for k in head.get("recommended_kols", [])[:2]:
+            lines.append(f"  - {k.get('name', '')} ({k.get('platform', '')}, {k.get('followers', '')}, ~{k.get('estimated_price', '')})")
+        lines.append(f"- 腰部: {waist.get('count', '0')} ({waist.get('purpose', '')}) 预算占比 {int(waist.get('budget_ratio', 0)*100)}%")
+        for k in waist.get("recommended_kols", [])[:3]:
+            lines.append(f"  - {k.get('name', '')} ({k.get('platform', '')}, {k.get('followers', '')}, ~{k.get('estimated_price', '')})")
+        lines.append(f"- KOC: {koc.get('count', '0')} ({koc.get('purpose', '')}) 预算占比 {int(koc.get('budget_ratio', 0)*100)}%")
+        lines.append("")
+
+    # 7. 内容方向
+    cs = strategy.get("content_strategy", {})
+    if cs:
+        lines.append("## 7. 内容方向")
+        lines.append(f"- **核心主题**: {', '.join(cs.get('core_themes', []))}")
+        lines.append(f"- **内容调性**: {cs.get('content_tone', '')}")
+        lines.append(f"- **Hashtag策略**: {cs.get('hashtag_strategy', '')}")
+        lines.append("")
+
+    # 8. 参考案例
+    cp = strategy.get("case_playbook", {})
+    if cp:
+        lines.append("## 8. 参考案例打法")
+        selected = cp.get("selected_cases", [])
+        if selected:
+            lines.append(f"- **映射案例**: {', '.join(selected)}")
+        pillars = cp.get("content_pillars", [])
+        for pillar in pillars[:3]:
+            lines.append(f"- {pillar.get('name', '')}: {pillar.get('objective', '')}")
+        lines.append("")
+
+    # 9. 已应用方法论
+    skills = strategy.get("applied_skills", [])
+    if skills:
+        lines.append("## 9. 已应用方法论 / Skills")
+        for s in skills:
+            lines.append(f"- {s}")
+        lines.append("")
+
     return "\n".join(lines)
 
 
@@ -175,6 +296,41 @@ async def root():
     return FileResponse(WEB_DIR / "index.html")
 
 
+def _normalize_goal_for_frontend(goal: str) -> str:
+    """将解析出的中文目标映射为前端 select 的 value 码。"""
+    goal = (goal or "").strip()
+    if "曝光" in goal or goal == "品牌曝光":
+        return "brand"
+    if "复购" in goal:
+        return "repurchase"
+    if "销售" in goal or "带货" in goal:
+        return "sales"
+    if "认知" in goal or "种草" in goal:
+        return "awareness"
+    return ""
+
+
+def _normalize_budget_for_frontend(budget_amount: Any) -> str:
+    """将预算金额映射为前端 select 的区间码。"""
+    try:
+        val = float(budget_amount)
+    except (TypeError, ValueError):
+        return ""
+    if 5 <= val <= 10:
+        return "5-10"
+    if 10 < val <= 20:
+        return "10-20"
+    if 20 < val <= 50:
+        return "20-50"
+    if 50 < val <= 100:
+        return "50-100"
+    if 100 < val <= 200:
+        return "100-200"
+    if val > 200:
+        return "200+"
+    return ""
+
+
 @app.post("/api/analyze-brief")
 async def api_analyze_brief(req: AnalyzeBriefRequest):
     """Parse uploaded brief text into structured fields."""
@@ -187,12 +343,26 @@ async def api_analyze_brief(req: AnalyzeBriefRequest):
         "brand": parsed.get("brand", ""),
         "product": parsed.get("product", "") or "",
         "features": ", ".join(parsed.get("key_messages", [])),
-        "goal": parsed.get("goal", ""),
-        "budget": str(parsed.get("budget_amount", "")),
+        "goal": _normalize_goal_for_frontend(parsed.get("goal", "")),
+        "budget": _normalize_budget_for_frontend(parsed.get("budget_amount", "")),
         "cpm": "",
         "cpe": "",
-        "theme": "",
+        "theme": parsed.get("theme", "") or "",
     }
+
+    # Persist session for feedback tracking
+    try:
+        sid, spath = persist_workflow_session(
+            workflow_name="BriefAnalyze",
+            input_data={"text": req.text[:2000], "filename": req.filename},
+            result={"parsed": parsed, "normalized": result},
+            prompt_label="ma-brief-parse",
+        )
+        result["session_id"] = sid
+        result["session_path"] = spath
+    except Exception as e:
+        result["session_error"] = str(e)
+
     return {"ok": True, "data": result}
 
 
