@@ -1042,6 +1042,94 @@
             return budgets[budget] || budget;
         }
         
+        function _markdownToHtml(md) {
+            if (!md) return '';
+            const lines = md.split('\n');
+            const out = [];
+            let inUl = false;
+            let inOl = false;
+
+            const flushList = () => {
+                if (inUl) { out.push('</ul>'); inUl = false; }
+                if (inOl) { out.push('</ol>'); inOl = false; }
+            };
+
+            const inlineFormat = (text) => {
+                let s = text;
+                // Bold: **text** (content cannot contain bare *)
+                s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                // Bold: __text__
+                s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+                // Italic: *text* but not touching another *
+                s = s.replace(/(^|[^*])\*([^*]+)\*([^*]|$)/g, '$1<em>$2</em>$3');
+                return s;
+            };
+
+            for (let raw of lines) {
+                const line = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+                // Headers
+                if (/^####\s+/.test(line)) {
+                    flushList();
+                    out.push('<h4 style="color:var(--primary);margin:10px 0 6px;">' + inlineFormat(line.replace(/^####\s+/, '')) + '</h4>');
+                    continue;
+                }
+                if (/^###\s+/.test(line)) {
+                    flushList();
+                    out.push('<h3 style="color:var(--primary);margin:10px 0 6px;">' + inlineFormat(line.replace(/^###\s+/, '')) + '</h3>');
+                    continue;
+                }
+                if (/^##\s+/.test(line)) {
+                    flushList();
+                    out.push('<h2 style="color:var(--primary);margin:12px 0 8px;">' + inlineFormat(line.replace(/^##\s+/, '')) + '</h2>');
+                    continue;
+                }
+                if (/^#\s+/.test(line)) {
+                    flushList();
+                    out.push('<h1 style="color:var(--primary);margin:14px 0 10px;">' + inlineFormat(line.replace(/^#\s+/, '')) + '</h1>');
+                    continue;
+                }
+
+                // Unordered list
+                const ulMatch = line.match(/^(\*|\-)\s+(.+)$/);
+                if (ulMatch) {
+                    if (inOl) { out.push('</ol>'); inOl = false; }
+                    if (!inUl) {
+                        out.push('<ul style="margin-left:18px;margin-top:4px;margin-bottom:8px;">');
+                        inUl = true;
+                    }
+                    out.push('<li style="margin:3px 0;">' + inlineFormat(ulMatch[2]) + '</li>');
+                    continue;
+                }
+
+                // Ordered list
+                const olMatch = line.match(/^(\d+)\.\s+(.+)$/);
+                if (olMatch) {
+                    if (inUl) { out.push('</ul>'); inUl = false; }
+                    if (!inOl) {
+                        out.push('<ol style="margin-left:18px;margin-top:4px;margin-bottom:8px;">');
+                        inOl = true;
+                    }
+                    out.push('<li style="margin:3px 0;">' + inlineFormat(olMatch[2]) + '</li>');
+                    continue;
+                }
+
+                // Empty line
+                if (line.trim() === '') {
+                    flushList();
+                    out.push('<br>');
+                    continue;
+                }
+
+                // Plain paragraph
+                flushList();
+                out.push('<p style="margin:4px 0;">' + inlineFormat(line) + '</p>');
+            }
+
+            flushList();
+            return out.join('');
+        }
+
         function _renderListItems(arr) {
             if (!Array.isArray(arr) || arr.length === 0) return '';
             return '<ul style="margin-left:18px;margin-top:4px;">' + arr.map(x => `<li style="margin:2px 0;">${x}</li>`).join('') + '</ul>';
@@ -1074,7 +1162,7 @@
             const skills = strategy.applied_skills || [];
             const keyInsights = strategy.key_insights || [];
 
-            const htmlMarkdown = markdown.replace(/\n/g, '<br>').replace(/^#{1,3}\s(.+)$/gm, '<h3 style="color:var(--primary);margin:10px 0 6px;">$1</h3>');
+            const htmlMarkdown = _markdownToHtml(markdown);
 
             const researchMeta = strategy.research_metadata || {};
             const researchSources = researchMeta.sources || [];
