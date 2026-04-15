@@ -1,0 +1,44 @@
+name: Build Windows Executable
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Install Playwright browsers (optional)
+        run: |
+          python -m playwright install chromium firefox
+        continue-on-error: true
+
+      - name: Build executable with PyInstaller
+        run: |
+          python -m PyInstaller ma-web.spec --clean --noconfirm
+
+      - name: Package as ZIP
+        run: |
+          Compress-Archive -Path "dist\ma-agent\*" -DestinationPath "dist\ma-agent-windows.zip" -Force
+
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ma-agent-windows
+          path: dist/ma-agent-windows.zip

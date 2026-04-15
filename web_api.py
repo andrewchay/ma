@@ -14,7 +14,9 @@ from typing import Any, Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from dotenv import load_dotenv
-load_dotenv()
+
+_env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=_env_path if _env_path.exists() else None)
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
