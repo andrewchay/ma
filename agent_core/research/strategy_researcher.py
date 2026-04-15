@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_core.research.tavily_client import tavily_search_multi
+from agent_core.research.metaso_client import metaso_search_multi
 from agent_core.research.camoufox_client import camoufox_search
 
 
@@ -72,8 +73,9 @@ def research_for_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
     queries = _build_queries(brief_data)
     platform_queries = _build_platform_queries(brief_data)
 
-    # Tavily web search
+    # Tavily + Metaso web search (parallel-ish sequential calls)
     tavily_results = tavily_search_multi(queries, max_results=5, search_depth="basic")
+    metaso_results = metaso_search_multi(queries, max_results=5, scope="webpage", include_summary=True)
 
     # Camoufox platform scraping (slower, so keep minimal)
     camoufox_results = []
@@ -91,7 +93,7 @@ def research_for_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
             continue
         answer = tr.get("answer")
         if answer:
-            combined_snippets.append(f"【{tr['query']}】\n{answer}")
+            combined_snippets.append(f"【Tavily: {tr['query']}】\n{answer}")
         for r in tr.get("results", []):
             title = r.get("title", "")
             content = r.get("content", "")
@@ -99,6 +101,21 @@ def research_for_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
             if content:
                 combined_snippets.append(f"- {title}: {content}")
                 sources.append({"title": title, "url": url, "source": "tavily"})
+
+    for mr in metaso_results:
+        if mr.get("error"):
+            combined_snippets.append(f"[Metaso: {mr['query']}] Error: {mr['error']}")
+            continue
+        answer = mr.get("answer")
+        if answer:
+            combined_snippets.append(f"【Metaso: {mr['query']}】\n{answer}")
+        for r in mr.get("results", []):
+            title = r.get("title", "")
+            content = r.get("content", "")
+            url = r.get("url", "")
+            if content:
+                combined_snippets.append(f"- {title}: {content}")
+                sources.append({"title": title, "url": url, "source": "metaso"})
 
     for cr in camoufox_results:
         if cr.get("error"):
@@ -111,11 +128,13 @@ def research_for_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "tavily_results": tavily_results,
+        "metaso_results": metaso_results,
         "camoufox_results": camoufox_results,
         "combined_snippets": combined_snippets,
         "sources": sources,
         "applied_skills": [
             "tavily-web-search",
+            "metaso-cn-search",
             "camoufox-platform-scraping",
             "research-anything",
             "competitive-analysis",
