@@ -38,6 +38,8 @@ if errorlevel 1 (
 
 :: Package into zip for easy distribution
 echo [4/4] Packaging into dist\ma-agent-windows.zip...
+copy /y "scripts\setup-windows.bat" "dist\ma-agent\setup.bat" >nul
+copy /y "scripts\WINDOWS_SETUP_README.txt" "dist\ma-agent\README.txt" >nul
 powershell -Command "Compress-Archive -Path 'dist\ma-agent\*' -DestinationPath 'dist\ma-agent-windows.zip' -Force"
 
 echo ========================================

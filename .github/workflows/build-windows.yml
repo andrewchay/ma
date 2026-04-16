@@ -39,6 +39,8 @@ jobs:
 
       - name: Package as ZIP
         run: |
+          Copy-Item "scripts\setup-windows.bat" "dist\ma-agent\setup.bat"
+          Copy-Item "scripts\WINDOWS_SETUP_README.txt" "dist\ma-agent\README.txt"
           Compress-Archive -Path "dist\ma-agent\*" -DestinationPath "dist\ma-agent-windows.zip" -Force
 
       - name: Upload executable artifact
