@@ -45,7 +45,6 @@ ma/                                # 项目根目录
 │   ├── tools/                    # Tools实现
 │   ├── models/                   # 数据模型
 │   └── ...
-├── streamlit_app.py              # ✅ Streamlit Web界面
 ├── run_web.sh                    # ✅ Web启动脚本
 ├── requirements.txt              # ✅ Python依赖
 ├── .agent/spec/                  # 配置文件
@@ -58,11 +57,11 @@ ma/                                # 项目根目录
 ### 启动方式
 
 ```bash
-# 方式1: 使用启动脚本
+# 使用启动脚本
 ./run_web.sh
 
-# 方式2: 直接启动
-python3 -m streamlit run streamlit_app.py
+# 或直接启动
+python3 web_api.py
 ```
 
 ### Web界面功能

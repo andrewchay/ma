@@ -11,9 +11,6 @@ cd /Users/chaihao/LLM/ma
 
 # 启动Web服务
 ./run_web.sh
-
-# 或直接使用streamlit
-python3 -m streamlit run streamlit_app.py
 ```
 
 然后在浏览器打开: **http://localhost:8501**
@@ -121,7 +118,7 @@ ma/
 │   ├── tools/                  # Tools实现
 │   ├── models/                 # 数据模型
 │   └── runtime/                # 运行时
-├── streamlit_app.py            # ✅ Web界面主文件
+├── web_api.py                  # ✅ FastAPI Web服务
 ├── run_web.sh                  # ✅ Web启动脚本
 ├── requirements.txt            # ✅ 依赖文件
 ├── cli.py                      # CLI入口
