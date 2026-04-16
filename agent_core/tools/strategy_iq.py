@@ -411,6 +411,15 @@ def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
         "   - 用 80/20 规则：聚焦 2-3 个最能产生洞察的方向深入，而非面面俱到\n"
         "   - 每个事实性判断尽量 triangulate：有 brief 信息、行业常识、逻辑推导三者中至少两者支撑\n"
         '   - 明确区分"已知事实"和"合理推断"\n\n'
+        + (
+            "【海外投放特别要求】\n"
+            "   - 平台策略必须优先使用海外主流平台（TikTok、Instagram、YouTube、Twitter/X、Reddit、LinkedIn 等）\n"
+            "   - KOL 推荐必须匹配海外创作者生态（按地区、语言、粉丝量级分层）\n"
+            "   - 内容角度要考虑跨文化适应性，避免只有中文语境才能理解的梗\n"
+            "   - 合规方面需提及 FTC 披露要求、平台社区准则、以及目标市场的广告法规\n\n"
+            if brief_data.get("is_overseas", False) else ""
+        )
+        +
         "【重要要求 - 基于用户反馈迭代】\n"
         "1. 必须包含具体的KOL推荐（头部和腰部都要有具体人选或类型描述）\n"
         "2. 平台策略要有详细的选择理由\n"

@@ -59,6 +59,48 @@ SKILLS: dict[str, SkillSpec] = {
         description="Outreach and negotiation specialist.",
         modes=("outreach",),
     ),
+    "marketing-tiktok-strategist": SkillSpec(
+        key="marketing-tiktok-strategist",
+        path="/Users/chaihao/LLM/agency-agents/marketing/marketing-tiktok-strategist.md",
+        description="TikTok viral content, algorithm optimization, and Gen Z community building.",
+        modes=("strategy", "kol", "creative"),
+        platforms=("TikTok", "抖音国际版"),
+    ),
+    "marketing-instagram-curator": SkillSpec(
+        key="marketing-instagram-curator",
+        path="/Users/chaihao/LLM/agency-agents/marketing/marketing-instagram-curator.md",
+        description="Instagram visual storytelling, Reels, and social commerce.",
+        modes=("strategy", "kol", "creative"),
+        platforms=("Instagram", "IG"),
+    ),
+    "marketing-twitter-engager": SkillSpec(
+        key="marketing-twitter-engager",
+        path="/Users/chaihao/LLM/agency-agents/marketing/marketing-twitter-engager.md",
+        description="Twitter/X real-time engagement, thought leadership, and community-driven growth.",
+        modes=("strategy", "kol", "creative"),
+        platforms=("Twitter", "X", "推特"),
+    ),
+    "marketing-reddit-community-builder": SkillSpec(
+        key="marketing-reddit-community-builder",
+        path="/Users/chaihao/LLM/agency-agents/marketing/marketing-reddit-community-builder.md",
+        description="Reddit authentic community engagement and value-driven brand building.",
+        modes=("strategy", "kol", "creative"),
+        platforms=("Reddit", "红迪"),
+    ),
+    "marketing-video-optimization-specialist": SkillSpec(
+        key="marketing-video-optimization-specialist",
+        path="/Users/chaihao/LLM/agency-agents/marketing/marketing-video-optimization-specialist.md",
+        description="YouTube algorithm optimization, audience retention, thumbnail strategy, and video SEO.",
+        modes=("strategy", "kol", "creative"),
+        platforms=("YouTube", "油管", "YouTube Shorts"),
+    ),
+    "marketing-linkedin-content-creator": SkillSpec(
+        key="marketing-linkedin-content-creator",
+        path="/Users/chaihao/LLM/agency-agents/marketing/marketing-linkedin-content-creator.md",
+        description="LinkedIn thought leadership, personal brand building, and B2B professional content.",
+        modes=("strategy", "kol", "creative"),
+        platforms=("LinkedIn", "领英"),
+    ),
 }
 
 
@@ -67,6 +109,12 @@ ALIASES: dict[str, str] = {
     "xhs": "marketing-xiaohongshu-specialist",
     "douyin": "marketing-douyin-strategist",
     "outbound": "sales-outbound-strategist",
+    "tiktok": "marketing-tiktok-strategist",
+    "instagram": "marketing-instagram-curator",
+    "twitter": "marketing-twitter-engager",
+    "reddit": "marketing-reddit-community-builder",
+    "youtube": "marketing-video-optimization-specialist",
+    "linkedin": "marketing-linkedin-content-creator",
 }
 
 

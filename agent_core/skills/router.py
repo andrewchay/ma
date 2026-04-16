@@ -10,6 +10,7 @@ from agent_core.skills.registry import SKILLS, resolve_skill_key
 def _default_candidates(mode: str, brief_data: dict[str, Any]) -> list[str]:
     platform_text = " ".join(brief_data.get("preferred_platforms", []) or [])
     industry = str(brief_data.get("industry", "") or "")
+    is_overseas = bool(brief_data.get("is_overseas", False))
     candidates = ["agency-agents"]
 
     if mode == "strategy":
@@ -18,10 +19,37 @@ def _default_candidates(mode: str, brief_data: dict[str, Any]) -> list[str]:
         candidates.extend(["brand-storytelling", "content-marketing"])
     if mode == "outreach":
         candidates.append("sales-outbound-strategist")
+
+    # Domestic platforms
     if "小红书" in platform_text:
         candidates.append("marketing-xiaohongshu-specialist")
     if "抖音" in platform_text:
         candidates.append("marketing-douyin-strategist")
+
+    # Overseas platforms
+    if is_overseas or "TikTok" in platform_text or "抖音国际版" in platform_text:
+        candidates.append("marketing-tiktok-strategist")
+    if is_overseas or "Instagram" in platform_text or "IG" in platform_text:
+        candidates.append("marketing-instagram-curator")
+    if is_overseas or "YouTube" in platform_text or "Shorts" in platform_text:
+        candidates.append("marketing-video-optimization-specialist")
+    if "Twitter" in platform_text or "X" in platform_text or "推特" in platform_text:
+        candidates.append("marketing-twitter-engager")
+    if "Reddit" in platform_text or "红迪" in platform_text:
+        candidates.append("marketing-reddit-community-builder")
+    if "LinkedIn" in platform_text or "领英" in platform_text:
+        candidates.append("marketing-linkedin-content-creator")
+
+    # Overseas catch-all: if explicitly overseas but no specific platform matched, add core ones
+    if is_overseas and not any(
+        p in platform_text for p in ("TikTok", "Instagram", "YouTube", "Twitter", "X", "Reddit", "LinkedIn")
+    ):
+        candidates.extend([
+            "marketing-tiktok-strategist",
+            "marketing-instagram-curator",
+            "marketing-video-optimization-specialist",
+        ])
+
     if "运动鞋服" in industry:
         candidates.append("brand-storytelling")
     return list(dict.fromkeys(candidates))
