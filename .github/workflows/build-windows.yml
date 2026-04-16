@@ -24,6 +24,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt pyinstaller
 
+      - name: Prepare .env for packaging
+        run: |
+          Copy-Item .env.example .env
+
       - name: Install Playwright browsers (optional)
         run: |
           python -m playwright install chromium firefox

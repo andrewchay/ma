@@ -8,8 +8,15 @@ base_path = Path(SPECPATH)
 
 # Data files to bundle
 # (source_path, dest_folder_in_bundle)
-datas = [
-    (str(base_path / '.env'), '.'),
+datas = []
+
+# .env is gitignored; gracefully skip if missing (CI will create it from .env.example)
+_env_file = base_path / '.env'
+if _env_file.exists():
+    datas.append((str(_env_file), '.'))
+
+# Always bundle core directories
+datas += [
     (str(base_path / 'web'), 'web'),
     (str(base_path / 'agent_core'), 'agent_core'),
     (str(base_path / 'tests'), 'tests'),
