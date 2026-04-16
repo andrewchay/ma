@@ -416,7 +416,8 @@ def generate_strategy(brief_data: dict[str, Any]) -> dict[str, Any]:
             "   - 平台策略必须优先使用海外主流平台（TikTok、Instagram、YouTube、Twitter/X、Reddit、LinkedIn 等）\n"
             "   - KOL 推荐必须匹配海外创作者生态（按地区、语言、粉丝量级分层）\n"
             "   - 内容角度要考虑跨文化适应性，避免只有中文语境才能理解的梗\n"
-            "   - 合规方面需提及 FTC 披露要求、平台社区准则、以及目标市场的广告法规\n\n"
+            "   - 合规方面需提及 FTC 披露要求、平台社区准则、以及目标市场的广告法规\n"
+            "   - 若预算允许，应补充 Meta Ads（Facebook/Instagram）和 Google Ads（Search/YouTube/Performance Max）的付费投放建议\n\n"
             if brief_data.get("is_overseas", False) else ""
         )
         +

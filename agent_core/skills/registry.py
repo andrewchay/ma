@@ -101,6 +101,20 @@ SKILLS: dict[str, SkillSpec] = {
         modes=("strategy", "kol", "creative"),
         platforms=("LinkedIn", "领英"),
     ),
+    "paid-media-paid-social-strategist": SkillSpec(
+        key="paid-media-paid-social-strategist",
+        path="/Users/chaihao/LLM/agency-agents/paid-media/paid-media-paid-social-strategist.md",
+        description="Cross-platform paid social ads (Meta/Facebook/Instagram, TikTok, LinkedIn, X, Snapchat) with full-funnel architecture.",
+        modes=("strategy", "creative"),
+        platforms=("Meta", "Facebook", "Instagram", "TikTok Ads", "Snapchat", "Pinterest", "X Ads"),
+    ),
+    "paid-media-ppc-strategist": SkillSpec(
+        key="paid-media-ppc-strategist",
+        path="/Users/chaihao/LLM/agency-agents/paid-media/paid-media-ppc-strategist.md",
+        description="Google Ads, Microsoft Ads, Amazon Ads — search, shopping, Performance Max, and scale strategy.",
+        modes=("strategy", "creative"),
+        platforms=("Google", "Google Ads", "YouTube Ads", "Microsoft Ads", "Bing", "Amazon Ads"),
+    ),
 }
 
 
@@ -115,6 +129,11 @@ ALIASES: dict[str, str] = {
     "reddit": "marketing-reddit-community-builder",
     "youtube": "marketing-video-optimization-specialist",
     "linkedin": "marketing-linkedin-content-creator",
+    "meta-ads": "paid-media-paid-social-strategist",
+    "facebook-ads": "paid-media-paid-social-strategist",
+    "paid-social": "paid-media-paid-social-strategist",
+    "google-ads": "paid-media-ppc-strategist",
+    "ppc": "paid-media-ppc-strategist",
 }
 
 

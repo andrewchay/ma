@@ -50,6 +50,12 @@ def _default_candidates(mode: str, brief_data: dict[str, Any]) -> list[str]:
             "marketing-video-optimization-specialist",
         ])
 
+    # Paid advertising detection
+    paid_markers = ["Meta", "Facebook", "Google Ads", "Google", "Bing", "PPC", "付费广告", "投放", "广告", "Ads"]
+    if any(marker in platform_text for marker in paid_markers):
+        candidates.append("paid-media-paid-social-strategist")
+        candidates.append("paid-media-ppc-strategist")
+
     if "运动鞋服" in industry:
         candidates.append("brand-storytelling")
     return list(dict.fromkeys(candidates))
